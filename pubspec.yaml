@@ -1,0 +1,25 @@
+name: maxi_thread
+description: A starting point for Dart libraries or applications.
+version: 1.0.0
+publish_to: none
+# repository: https://github.com/my_org/my_repo
+
+environment:
+  sdk: ^3.9.2
+
+# Add regular dependencies here.
+dependencies:
+  # path: ^1.9.0
+  meta: ^1.17.0
+  path: ^1.9.1
+  rxdart: ^0.28.0
+
+  maxi_framework:
+  #git:
+    #  url: https://github.com/MaxiCamilo/maxi_framework.git
+    #  ref: main
+    path: ../maxi_framework
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6
