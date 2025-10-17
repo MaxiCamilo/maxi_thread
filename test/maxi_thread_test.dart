@@ -52,7 +52,7 @@ void main() {
     });
 
     test('Cancel function', () async {
-      await encapsulatedFunction((heart) async {
+      await managedFunction((heart) async {
         final threadResult = await ThreadSingleton.createThread(name: 'Hola');
         if (threadResult.itsFailure) {
           throw threadResult.error;

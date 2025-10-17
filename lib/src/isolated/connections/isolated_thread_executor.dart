@@ -27,7 +27,7 @@ class IsolatedThreadExecutor with DisposableMixin {
 
     await Future.delayed(Duration.zero);
 
-    final container = await encapsulatedFunction((heart) async {
+    final container = await managedFunction((heart) async {
       _heartMap[id] = heart;
       if (content is IsolatedThreadFunctionPack) {
         return await content.execute(onItem: (x) => _sendItem(id, x));

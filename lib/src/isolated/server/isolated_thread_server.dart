@@ -8,20 +8,24 @@ import 'package:maxi_thread/src/isolated/channels/isolator_channel_initiation_po
 import 'package:maxi_thread/src/isolated/clients/isolated_thread_created.dart';
 import 'package:maxi_thread/src/isolated/connections/isolated_thread_connection.dart';
 import 'package:maxi_thread/src/isolated/logic/prepare_service.dart';
-import 'package:maxi_thread/src/isolated/server/isolated_thread.dart';
 import 'package:maxi_thread/src/isolated/clients/isolated_thread_client.dart';
+import 'package:maxi_thread/src/isolated/server/isolate_thread_background_manager.dart';
 
 class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
   final _childs = <IsolatedThreadCreated>[];
   final _services = <Type, ThreadInvocator>{};
   final _subClients = <IsolatedThreadConnection>[];
 
+  IsolateThreadBackgroundManager? _backgroundManager;
+
   @override
   ThreadInvocator get server => const MainThreadInstance();
 
   @override
-  // TODO: implement background
-  ThreadInvocator get background => throw UnimplementedError();
+  ThreadInvocator get background {
+    _backgroundManager ??= IsolateThreadBackgroundManager(server: this);
+    return _backgroundManager!;
+  }
 
   @override
   T? getEntityThread<T>() => null;
@@ -115,6 +119,9 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
     _subClients.clear();
     _childs.clear();
     _services.clear();
+
+    _backgroundManager?.dispose();
+    _backgroundManager = null;
 
     return voidResult;
   }

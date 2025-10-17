@@ -6,6 +6,7 @@ import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/maxi_thread.dart';
 import 'package:maxi_thread/src/isolated/channels/isolator_channel_end_point.dart';
 import 'package:maxi_thread/src/isolated/channels/isolator_channel_initiation_point.dart';
+import 'package:maxi_thread/src/isolated/clients/isolated_thread_client_background.dart';
 import 'package:maxi_thread/src/isolated/clients/isolated_thread_entity_connection.dart';
 import 'package:maxi_thread/src/isolated/messages/isolated_thread_message.dart';
 import 'package:maxi_thread/src/isolated/connections/isolated_thread_connection.dart';
@@ -28,8 +29,7 @@ class IsolatedThreadClient implements ThreadInstance, IsolatedThread {
   }
 
   @override
-  // TODO: implement background
-  ThreadInvocator get background => throw UnimplementedError();
+  ThreadInvocator get background => IsolatedThreadClientBackground(server: server);
 
   @override
   Future<Result<ThreadInvocator>> createServiceThread<T extends Object>({required T item, bool skipIfAlreadyMounted = true, String? name}) async {
