@@ -84,7 +84,7 @@ class IsolatedThreadRequester with DisposableMixin {
 
     final idResult = await _semaphore.execute(() async {
       if (heart != null && heart.itWasDiscarded) {
-        return CancelationResult<int>(cancelationStackTrace: StackTrace.current);
+        return const CancelationResult<int>();
       }
 
       _taskConfirmationWaiter = waiterID;
@@ -122,7 +122,7 @@ class IsolatedThreadRequester with DisposableMixin {
       onHeartDone = heart.onDispose.whenComplete(() {
         channel.send(IsolatedThreadMessage(type: IsolatedThreadMessageType.cancel, identifier: id, content: null));
         if (!completer.isCompleted) {
-          completer.complete(CancelationResult<T>(cancelationStackTrace: StackTrace.current));
+          completer.complete(CancelationResult<T>());
         }
       });
     }
@@ -143,7 +143,7 @@ class IsolatedThreadRequester with DisposableMixin {
     _itemStream.entries.lambda((x) => x.value.close());
     _itemStream.clear();
 
-    _tasks.entries.lambda((x) => x.value.complete(CancelationResult(cancelationStackTrace: StackTrace.current)));
+    _tasks.entries.lambda((x) => x.value.complete(const CancelationResult()));
     _tasks.clear();
   }
 }

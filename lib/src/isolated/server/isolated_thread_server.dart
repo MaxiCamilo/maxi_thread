@@ -7,6 +7,7 @@ import 'package:maxi_thread/src/fake/main_thread_instance.dart';
 import 'package:maxi_thread/src/isolated/channels/isolator_channel_initiation_point.dart';
 import 'package:maxi_thread/src/isolated/clients/isolated_thread_created.dart';
 import 'package:maxi_thread/src/isolated/connections/isolated_thread_connection.dart';
+import 'package:maxi_thread/src/isolated/logic/define_app_manager_in_isolator.dart';
 import 'package:maxi_thread/src/isolated/logic/prepare_service.dart';
 import 'package:maxi_thread/src/isolated/clients/isolated_thread_client.dart';
 import 'package:maxi_thread/src/isolated/server/isolate_thread_background_manager.dart';
@@ -65,6 +66,13 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
 
   @override
   Future<Result<IsolatedThreadConnection>> createThread({required String name}) async {
+    if (!ApplicationManager.itsWasDefined) {
+      return NegativeResult.controller(
+        code: ErrorCode.implementationFailure,
+        message: FixedOration(message: 'You must first define the application manager'),
+      );
+    }
+
     final point = IsolatorChannelInitiationPoint();
     final isolate = await Isolate.spawn(_prepareThread, point.output, debugName: name, errorsAreFatal: false);
     if (!await point.waitConfirmation()) {
@@ -79,6 +87,14 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
     _childs.add(instance);
 
     connection.onDispose.whenComplete(() => _childs.remove(instance));
+
+    final appManagerClone = ApplicationManager.singleton.cloneToIsolate();
+    if (appManagerClone.itsFailure) return appManagerClone.cast();
+
+    final defineAppManagerResult = await DefineAppManagerInIsolator(appManager: appManagerClone.content).inThread(connection);
+    if (defineAppManagerResult.itsFailure) {
+      return defineAppManagerResult.cast();
+    }
 
     return ResultValue(content: connection);
   }

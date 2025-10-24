@@ -24,7 +24,7 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
   Future<Result<ThreadInvocator>> _getThread() {
     return _semaphore.execute(() async {
       if (itWasDiscarded) {
-        return CancelationResult(cancelationStackTrace: StackTrace.current);
+        return const CancelationResult();
       }
 
       if (_busyTreadList.length >= limit) {
@@ -32,7 +32,7 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
         await _finishWaiter!.future;
         _finishWaiter = null;
         if (itWasDiscarded) {
-          return CancelationResult(cancelationStackTrace: StackTrace.current);
+          return const CancelationResult();
         }
       }
 

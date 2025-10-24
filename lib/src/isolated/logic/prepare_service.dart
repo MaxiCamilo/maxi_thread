@@ -4,7 +4,7 @@ import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/maxi_thread.dart';
 
 class PrepareService<T> with FunctionalityMixin<void> {
-  final T service;
+  final T service;  
 
   const PrepareService({required this.service});
 

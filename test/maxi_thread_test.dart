@@ -64,7 +64,7 @@ void main() {
             print('Hi maxi!');
             await LifeCoordinator.zoneHeart.delay(duration: const Duration(seconds: 60));
             if (LifeCoordinator.isZoneHeartCanceled) {
-              return CancelationResult(cancelationStackTrace: StackTrace.current);
+              return const CancelationResult();
             }
             print('Bye maxi!');
             return 'byebye';
