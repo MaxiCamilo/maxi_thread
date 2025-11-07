@@ -58,7 +58,11 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
     final thread = threadResult.content;
 
     try {
-      return thread.execute<T>(function: function, parameters: parameters);
+      if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
+        return CancelationResult();
+      } else {
+        return thread.execute<T>(function: function, parameters: parameters);
+      }
     } finally {
       _busyTreadList.remove(thread);
       _freeThreadList.add(thread);
@@ -79,7 +83,11 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
     final thread = threadResult.content;
 
     try {
-      return thread.executeInteractively<I, T>(function: function, parameters: parameters, onItem: onItem);
+      if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
+        return CancelationResult();
+      } else {
+        return thread.executeInteractively<I, T>(function: function, parameters: parameters, onItem: onItem);
+      }
     } finally {
       _busyTreadList.remove(thread);
       _freeThreadList.add(thread);
@@ -100,7 +108,32 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
     final thread = threadResult.content;
 
     try {
-      return thread.executeInteractivelyResult<I, T>(function: function, parameters: parameters, onItem: onItem);
+      if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
+        return CancelationResult();
+      } else {
+        return thread.executeInteractivelyResult<I, T>(function: function, parameters: parameters, onItem: onItem);
+      }
+    } finally {
+      _busyTreadList.remove(thread);
+      _freeThreadList.add(thread);
+
+      _finishWaiter?.complete();
+      _finishWaiter = null;
+    }
+  }
+
+  @override
+  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality, required void Function(Oration text) onText}) async {
+    final threadResult = await _getThread();
+    if (threadResult.itsFailure) return threadResult.cast();
+    final thread = threadResult.content;
+
+    try {
+      if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
+        return CancelationResult();
+      } else {
+        return thread.executeFunctionality<T>(functionality: functionality, onText: onText);
+      }
     } finally {
       _busyTreadList.remove(thread);
       _freeThreadList.add(thread);
@@ -117,7 +150,11 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
     final thread = threadResult.content;
 
     try {
-      return thread.executeResult<T>(function: function, parameters: parameters);
+      if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
+        return CancelationResult();
+      } else {
+        return thread.executeResult<T>(function: function, parameters: parameters);
+      }
     } finally {
       _busyTreadList.remove(thread);
       _freeThreadList.add(thread);

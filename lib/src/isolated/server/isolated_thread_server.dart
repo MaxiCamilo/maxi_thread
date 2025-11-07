@@ -53,7 +53,7 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
     final threadResult = await createThread(name: name);
     if (threadResult.itsFailure) return threadResult.cast();
 
-    final initResult = await PrepareService(service: service).inThread(threadResult.content);
+    final initResult = await PrepareService(service: getService()).inThread(threadResult.content);
     if (initResult.itsCorrect) {
       _services[T] = threadResult.content;
       threadResult.content.onDispose.whenComplete(() => _services.remove(T));
@@ -111,15 +111,15 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
   }
 
   @override
-  ThreadInvocator service<T extends Object>() {
+  Result<ThreadInvocator> getService<T extends Object>() {
     final item = _services[T];
     if (item == null) {
-      throw NegativeResult.controller(
+      return NegativeResult.controller(
         code: ErrorCode.implementationFailure,
         message: FlexibleOration(message: 'Service %1 has not been mounted yet', textParts: [T]),
       );
     } else {
-      return item;
+      return ResultValue(content: item);
     }
   }
 

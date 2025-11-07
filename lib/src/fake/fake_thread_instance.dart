@@ -17,8 +17,8 @@ class FakeThreadInstance implements ThreadInstance {
   ThreadInvocator get server => const MainThreadInstance();
 
   @override
-  ThreadInvocator service<T extends Object>() {
-    return const MainThreadInstance();
+  Result<ThreadInvocator> getService<T extends Object>() {
+    return ResultValue(content: const MainThreadInstance());
   }
 
   @override

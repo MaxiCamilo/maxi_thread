@@ -5,7 +5,7 @@ abstract interface class ThreadInstance {
   ThreadInvocator get server;
   ThreadInvocator get background;
 
-  ThreadInvocator service<T extends Object>();
+  Result<ThreadInvocator> getService<T extends Object>();
 
   T? getEntityThread<T>();
   Future<Result<ThreadInvocator>> createThread({required String name});

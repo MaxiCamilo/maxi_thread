@@ -31,7 +31,7 @@ mixin ThreadSingleton {
   static ThreadInvocator get server => instance.server;
   static ThreadInvocator get background => instance.background;
 
-  static ThreadInvocator service<T extends Object>() => instance.service<T>();
+  static Result<ThreadInvocator> service<T extends Object>() => instance.getService<T>();
 
   static T? getEntityThread<T>() => instance.getEntityThread<T>();
   static Future<Result<ThreadInvocator>> createThread({required String name}) => instance.createThread(name: name);

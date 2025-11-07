@@ -11,3 +11,5 @@ export 'src/extension/thread_invocator_extensions.dart';
 export 'src/singletons/thread_entity.dart';
 
 export 'src/isolated/isolated_thread.dart';
+
+export 'src/tools/thread_symphony.dart';

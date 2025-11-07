@@ -26,7 +26,7 @@ class IsolatedThreadEntityConnection<E extends Object> with AsynchronouslyInitia
   }
 
   static Future<Result<SendPort>> _getEntityPoint<E extends Object>(InvocationParameters parameter) {
-    return (ThreadSingleton.instance.service<E>() as IsolatedThread).getNewSendPortFromThread();
+    return (ThreadSingleton.instance.getService<E>() as IsolatedThread).getNewSendPortFromThread();
   }
 
   @override
@@ -75,6 +75,14 @@ class IsolatedThreadEntityConnection<E extends Object> with AsynchronouslyInitia
     if (!initializationResult.itsCorrect) return initializationResult.cast();
 
     return await _connection.executeInteractivelyResult<I, T>(parameters: parameters, function: function, onItem: onItem);
+  }
+
+  @override
+  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality, required void Function(Oration text) onText}) async {
+    final initializationResult = await initialize();
+    if (!initializationResult.itsCorrect) return initializationResult.cast();
+
+    return await _connection.executeFunctionality<T>(functionality: functionality, onText: onText);
   }
 
   @override

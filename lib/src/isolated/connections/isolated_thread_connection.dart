@@ -67,6 +67,18 @@ class IsolatedThreadConnection with DisposableMixin implements ThreadInvocator, 
   }
 
   @override
+  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality, required void Function(Oration text) onText}) {
+    return executeInteractivelyResult<Oration, T>(function: _executeFunctionalityFromThread<T>, parameters: InvocationParameters.only(functionality), onItem: onText);
+  }
+
+  static Future<Result<T>> _executeFunctionalityFromThread<T>(InvocationParameters para) async {
+    final functionality = para.firts<Functionality<T>>().separateExecution();
+    functionality.connectToHeart();
+
+    return functionality.waitResult();
+  }
+
+  @override
   void performObjectDiscard() {}
 
   void _processPackage(dynamic event) {

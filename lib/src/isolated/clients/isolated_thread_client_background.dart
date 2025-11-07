@@ -34,6 +34,11 @@ class IsolatedThreadClientBackground implements ThreadInvocator {
     return server.executeInteractively<I, T>(function: _executeInteractively<I, T>, parameters: InvocationParameters.clone(parameters, avoidConstants: true)..namedParameters['&%=*'] = function, onItem: onItem);
   }
 
+  @override
+  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality, required void Function(Oration text) onText}) {
+    return server.executeFunctionality(functionality: functionality, onText: onText);
+  }
+
   static Future<T> _executeInteractively<I, T>(InvocationParameters parameters) async {
     final function = parameters.named<FutureOr<T> Function(InvocationParameters)>('&%=*');
     return (await ThreadSingleton.background.executeInteractively<I, T>(function: function, parameters: parameters, onItem: InteractiveSystem.sendItem)).content;

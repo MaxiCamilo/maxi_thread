@@ -75,17 +75,17 @@ class IsolatedThreadClient implements ThreadInstance, IsolatedThread {
   }
 
   @override
-  ThreadInvocator service<T extends Object>() {
+  Result<ThreadInvocator> getService<T extends Object>() {
     final instance = _services.selectType<IsolatedThreadEntityConnection<T>>();
     if (instance != null) {
-      return instance;
+      return ResultValue(content: instance);
     }
 
     final newInstance = IsolatedThreadEntityConnection<T>(serverConnection: server);
     _services.add(newInstance);
     newInstance.onDispose.whenComplete(() => _services.remove(newInstance));
 
-    return newInstance;
+    return ResultValue(content: newInstance);
   }
 
   @override

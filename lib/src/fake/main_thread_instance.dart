@@ -58,4 +58,15 @@ class MainThreadInstance implements ThreadInvocator {
   }) {
     return InteractiveSystem.execute(function: () async => await function(parameters), onItem: onItem);
   }
+
+  @override
+  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality, required void Function(Oration text) onText}) async {
+    if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
+      return CancelationResult();
+    }
+
+    final instance = functionality.interactiveExecution(onItem: onText);
+    instance.connectToHeart();
+    return instance.waitResult();
+  }
 }

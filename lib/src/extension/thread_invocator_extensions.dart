@@ -12,4 +12,6 @@ extension ThreadInvocatorExtensions on ThreadInvocator {
     required void Function(I text) onText,
     required FutureOr<Result<T>> Function(InvocationParameters para) function,
   }) => executeInteractivelyResult(onItem: onText, function: function, parameters: parameters);
+
+  
 }
