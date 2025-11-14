@@ -18,11 +18,15 @@ class ThreadSymphony with DisposableMixin implements ThreadInvocator {
     clone.lambda((x) => x.dispose());
   }
 
+  @override
+  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality, required void Function(Oration text) onText}) {
+    resurrectObject();
+    return threadInstance.background.executeFunctionality<T>(functionality: functionality, onText: onText);
+  }
+
   Future<Result<List<T>>> executeMultipleFunctions<T>({required List<Functionality<T>> list, void Function(Oration text)? onText}) {
     resurrectObject();
 
-
-    
     final pendingTasks = list
         .map(
           (e) => AsyncExecutor.function(
@@ -30,9 +34,41 @@ class ThreadSymphony with DisposableMixin implements ThreadInvocator {
           ),
         )
         .toList();
-    final results = [];
 
+    final results = <T>[];
     final completer = Completer<Result<List<T>>>();
+    bool isCanceled = false;
+
+    final whenHeartbreak = LifeCoordinator.tryGetZoneHeart?.onDispose.whenComplete(() {
+      pendingTasks.lambda((x) => x.dispose());
+      pendingTasks.clear();
+    });
+
+    for (final func in pendingTasks) {
+      func.onDispose.whenComplete(() => pendingTasks.remove(func));
+      func.waitResult().then((x) {
+        if (isCanceled) return;
+        pendingTasks.remove(func);
+        if (x.itsCorrect && x.content.itsCorrect) {
+          results.add(x.content.content);
+          if (pendingTasks.isEmpty && !completer.isCompleted) {
+            completer.complete(ResultValue(content: results));
+            whenHeartbreak?.ignore();
+          }
+        } else {
+          isCanceled = true;
+          if (!completer.isCompleted && x.itsFailure) {
+            completer.complete(x.cast());
+          } else if (!completer.isCompleted && x.content.itsFailure) {
+            completer.complete(x.content.cast());
+          }
+
+          pendingTasks.lambda((x) => x.dispose());
+          pendingTasks.clear();
+          whenHeartbreak?.ignore();
+        }
+      });
+    }
 
     return completer.future;
   }
