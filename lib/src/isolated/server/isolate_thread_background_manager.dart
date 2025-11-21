@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/maxi_thread.dart';
+import 'package:rxdart/rxdart.dart';
 
 class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvocator {
   final ThreadInstance server;
@@ -24,7 +25,7 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
   Future<Result<ThreadInvocator>> _getThread() {
     return _semaphore.execute(() async {
       if (itWasDiscarded) {
-        return const CancelationResult();
+        return CancelationResult();
       }
 
       if (_busyTreadList.length >= limit) {
@@ -32,7 +33,7 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
         await _finishWaiter!.future;
         _finishWaiter = null;
         if (itWasDiscarded) {
-          return const CancelationResult();
+          return CancelationResult();
         }
       }
 
@@ -73,11 +74,7 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
   }
 
   @override
-  Future<Result<T>> executeInteractively<I, T>({
-    InvocationParameters parameters = InvocationParameters.emptry,
-    required void Function(I item) onItem,
-    required FutureOr<T> Function(InvocationParameters para) function,
-  }) async {
+  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality}) async {
     final threadResult = await _getThread();
     if (threadResult.itsFailure) return threadResult.cast();
     final thread = threadResult.content;
@@ -86,53 +83,7 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
       if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
         return CancelationResult();
       } else {
-        return thread.executeInteractively<I, T>(function: function, parameters: parameters, onItem: onItem);
-      }
-    } finally {
-      _busyTreadList.remove(thread);
-      _freeThreadList.add(thread);
-
-      _finishWaiter?.complete();
-      _finishWaiter = null;
-    }
-  }
-
-  @override
-  Future<Result<T>> executeInteractivelyResult<I, T>({
-    InvocationParameters parameters = InvocationParameters.emptry,
-    required void Function(I item) onItem,
-    required FutureOr<Result<T>> Function(InvocationParameters para) function,
-  }) async {
-    final threadResult = await _getThread();
-    if (threadResult.itsFailure) return threadResult.cast();
-    final thread = threadResult.content;
-
-    try {
-      if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
-        return CancelationResult();
-      } else {
-        return thread.executeInteractivelyResult<I, T>(function: function, parameters: parameters, onItem: onItem);
-      }
-    } finally {
-      _busyTreadList.remove(thread);
-      _freeThreadList.add(thread);
-
-      _finishWaiter?.complete();
-      _finishWaiter = null;
-    }
-  }
-
-  @override
-  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality, required void Function(Oration text) onText}) async {
-    final threadResult = await _getThread();
-    if (threadResult.itsFailure) return threadResult.cast();
-    final thread = threadResult.content;
-
-    try {
-      if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
-        return CancelationResult();
-      } else {
-        return thread.executeFunctionality<T>(functionality: functionality, onText: onText);
+        return thread.executeFunctionality<T>(functionality: functionality);
       }
     } finally {
       _busyTreadList.remove(thread);
@@ -165,12 +116,6 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
   }
 
   @override
-  Stream<T> executeStream<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Stream<T>> Function(InvocationParameters para) function}) {
-    // TODO: implement executeStream
-    throw UnimplementedError();
-  }
-
-  @override
   void performObjectDiscard() {
     if (_finishWaiter != null && !_finishWaiter!.isCompleted) {
       _finishWaiter!.complete();
@@ -180,5 +125,16 @@ class IsolateThreadBackgroundManager with DisposableMixin implements ThreadInvoc
     _threadList.clear();
     _freeThreadList.clear();
     _busyTreadList.clear();
+  }
+
+  @override
+  Stream<T> executeStream<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Result<Stream<T>>> Function(InvocationParameters para) function}) async* {
+    final threadResult = await _getThread();
+    if (threadResult.itsFailure) throw threadResult.error;
+
+    yield* threadResult.content.executeStream(function: function, parameters: parameters).doOnCancel(() {
+      _busyTreadList.remove(threadResult.content);
+      _freeThreadList.add(threadResult.content);
+    });
   }
 }

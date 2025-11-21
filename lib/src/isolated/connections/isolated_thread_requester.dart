@@ -68,8 +68,8 @@ class IsolatedThreadRequester with DisposableMixin {
     }
   }
 
-  Future<Result<T>> execute<I, T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<T> Function(InvocationParameters para) function, void Function(I)? onItem}) {
-    return executeResult<I, T>(parameters: InvocationParameters.clone(parameters, avoidConstants: true)..namedParameters['%/#'] = function, function: _executionDirectFunction<T>, onItem: onItem);
+  Future<Result<T>> execute<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<T> Function(InvocationParameters para) function}) {
+    return executeResult<T>(parameters: InvocationParameters.clone(parameters, avoidConstants: true)..namedParameters['%/#'] = function, function: _executionDirectFunction<T>);
   }
 
   static Future<Result<T>> _executionDirectFunction<T>(InvocationParameters parameters) async {
@@ -78,13 +78,13 @@ class IsolatedThreadRequester with DisposableMixin {
     return ResultValue(content: await function(parameters));
   }
 
-  Future<Result<T>> executeResult<I, T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Result<T>> Function(InvocationParameters para) function, void Function(I)? onItem}) async {
+  Future<Result<T>> executeResult<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Result<T>> Function(InvocationParameters para) function}) async {
     final heart = LifeCoordinator.tryGetZoneHeart;
     final waiterID = Completer<Result<int>>();
 
     final idResult = await _semaphore.execute(() async {
       if (heart != null && heart.itWasDiscarded) {
-        return const CancelationResult<int>();
+        return CancelationResult<int>();
       }
 
       _taskConfirmationWaiter = waiterID;
@@ -92,7 +92,7 @@ class IsolatedThreadRequester with DisposableMixin {
         IsolatedThreadMessage(
           type: IsolatedThreadMessageType.newFunction,
           identifier: 0,
-          content: IsolatedThreadFunctionPack<I, T>(parameters: parameters, functionality: function),
+          content: IsolatedThreadFunctionPack<T>(parameters: parameters, functionality: function),
         ),
       );
       if (sendResult.itsFailure) {
@@ -103,16 +103,14 @@ class IsolatedThreadRequester with DisposableMixin {
       return await waiterID.future;
     });
 
-    StreamController<I>? streamController;
-
     if (idResult.itsFailure) return idResult.cast();
     final id = idResult.content;
 
-    if (onItem != null) {
-      streamController = StreamController<I>();
-      streamController.stream.listen(onItem);
-      _itemStream[id] = streamController;
-    }
+    final streamController = StreamController();
+    _itemStream[id] = streamController;
+    final sendersEvent = InteractiveSystem.getAllSenders();
+
+    streamController.stream.listen((event) => InteractiveSystem.sendItemCertainFunctions(list: sendersEvent, item: event));
 
     Future? onHeartDone;
     final completer = Completer<Result<T>>();
@@ -120,8 +118,9 @@ class IsolatedThreadRequester with DisposableMixin {
 
     if (heart != null) {
       onHeartDone = heart.onDispose.whenComplete(() {
-        channel.send(IsolatedThreadMessage(type: IsolatedThreadMessageType.cancel, identifier: id, content: null));
         if (!completer.isCompleted) {
+          channel.send(IsolatedThreadMessage(type: IsolatedThreadMessageType.cancel, identifier: id, content: null));
+
           completer.complete(CancelationResult<T>());
         }
       });
@@ -129,12 +128,10 @@ class IsolatedThreadRequester with DisposableMixin {
 
     final result = await completer.future;
     onHeartDone?.ignore();
-    streamController?.close();
-
+    streamController.close();
+    _itemStream.remove(id);
     _tasks.remove(id);
-    if (streamController != null) {
-      _itemStream.remove(id);
-    }
+
     return result;
   }
 
@@ -143,7 +140,7 @@ class IsolatedThreadRequester with DisposableMixin {
     _itemStream.entries.lambda((x) => x.value.close());
     _itemStream.clear();
 
-    _tasks.entries.lambda((x) => x.value.complete(const CancelationResult()));
+    _tasks.entries.lambda((x) => x.value.complete(CancelationResult()));
     _tasks.clear();
   }
 }

@@ -15,8 +15,11 @@ class IsolatedThreadClientBackground implements ThreadInvocator {
   }
 
   static Future<T> _execute<T>(InvocationParameters parameters) async {
+    final instance = ThreadInstance.getIsolatedInstance();
+    if (instance.itsFailure) throw instance.cast();
+
     final function = parameters.named<FutureOr<T> Function(InvocationParameters)>('&%=*');
-    return (await ThreadSingleton.background.execute(function: function, parameters: parameters)).content;
+    return (await instance.content.background.execute(function: function, parameters: parameters)).content;
   }
 
   @override
@@ -24,47 +27,21 @@ class IsolatedThreadClientBackground implements ThreadInvocator {
     return server.executeResult<T>(function: _executeResult<T>, parameters: InvocationParameters.clone(parameters, avoidConstants: true)..namedParameters['&%=*'] = function);
   }
 
-  static Future<Result<T>> _executeResult<T>(InvocationParameters parameters) {
+  static Future<Result<T>> _executeResult<T>(InvocationParameters parameters) async {
+    final instance = ThreadInstance.getIsolatedInstance();
+    if (instance.itsFailure) return instance.cast();
+
     final function = parameters.named<FutureOr<Result<T>> Function(InvocationParameters)>('&%=*');
-    return ThreadSingleton.background.executeResult(function: function, parameters: parameters);
+    return instance.content.background.executeResult(function: function, parameters: parameters);
   }
 
   @override
-  Future<Result<T>> executeInteractively<I, T>({InvocationParameters parameters = InvocationParameters.emptry, required void Function(I item) onItem, required FutureOr<T> Function(InvocationParameters para) function}) {
-    return server.executeInteractively<I, T>(function: _executeInteractively<I, T>, parameters: InvocationParameters.clone(parameters, avoidConstants: true)..namedParameters['&%=*'] = function, onItem: onItem);
+  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality}) {
+    return server.executeFunctionality(functionality: functionality);
   }
 
   @override
-  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality, required void Function(Oration text) onText}) {
-    return server.executeFunctionality(functionality: functionality, onText: onText);
-  }
-
-  static Future<T> _executeInteractively<I, T>(InvocationParameters parameters) async {
-    final function = parameters.named<FutureOr<T> Function(InvocationParameters)>('&%=*');
-    return (await ThreadSingleton.background.executeInteractively<I, T>(function: function, parameters: parameters, onItem: InteractiveSystem.sendItem)).content;
-  }
-
-  @override
-  Future<Result<T>> executeInteractivelyResult<I, T>({
-    InvocationParameters parameters = InvocationParameters.emptry,
-    required void Function(I item) onItem,
-    required FutureOr<Result<T>> Function(InvocationParameters para) function,
-  }) {
-    return server.executeInteractivelyResult<I, T>(
-      function: _executeInteractivelyResult<I, T>,
-      parameters: InvocationParameters.clone(parameters, avoidConstants: true)..namedParameters['&%=*'] = function,
-      onItem: onItem,
-    );
-  }
-
-  static Future<Result<T>> _executeInteractivelyResult<I, T>(InvocationParameters parameters) {
-    final function = parameters.named<FutureOr<Result<T>> Function(InvocationParameters)>('&%=*');
-    return ThreadSingleton.background.executeInteractivelyResult<I, T>(function: function, parameters: parameters, onItem: InteractiveSystem.sendItem);
-  }
-
-  @override
-  Stream<T> executeStream<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Stream<T>> Function(InvocationParameters para) function}) {
-    // TODO: implement executeStream
-    throw UnimplementedError();
+  Stream<T> executeStream<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Result<Stream<T>>> Function(InvocationParameters para) function}) {
+    return server.executeStream<T>(function: function, parameters: parameters);
   }
 }

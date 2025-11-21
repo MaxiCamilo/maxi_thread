@@ -12,9 +12,9 @@ extension FunctionalityExtensions<T> on Functionality<T> {
   }
 
   Future<Result<T>> inService<S extends Object>(ThreadInstance invoker) async {
-    final thread = invoker.getService<S>();
+    final thread = invoker.services.getServiceInvocator<S>();
     if (thread.itsFailure) return thread.cast();
 
-    return await inThread(thread.content);
+    return await thread.content.executeResult<T>(parameters: InvocationParameters.only(this), function: (serv, para) => para.firts<Functionality<T>>().execute());
   }
 }

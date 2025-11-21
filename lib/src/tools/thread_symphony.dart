@@ -19,21 +19,15 @@ class ThreadSymphony with DisposableMixin implements ThreadInvocator {
   }
 
   @override
-  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality, required void Function(Oration text) onText}) {
+  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality}) {
     resurrectObject();
-    return threadInstance.background.executeFunctionality<T>(functionality: functionality, onText: onText);
+    return threadInstance.background.executeFunctionality<T>(functionality: functionality);
   }
 
   Future<Result<List<T>>> executeMultipleFunctions<T>({required List<Functionality<T>> list, void Function(Oration text)? onText}) {
     resurrectObject();
 
-    final pendingTasks = list
-        .map(
-          (e) => AsyncExecutor.function(
-            function: () => threadInstance.background.executeFunctionality(functionality: e, onText: onText ?? (_) {}),
-          ),
-        )
-        .toList();
+    final pendingTasks = list.map((e) => AsyncExecutor.function(function: () => threadInstance.background.executeFunctionality(functionality: e))).toList();
 
     final results = <T>[];
     final completer = Completer<Result<List<T>>>();
@@ -94,50 +88,6 @@ class ThreadSymphony with DisposableMixin implements ThreadInvocator {
   }
 
   @override
-  Future<Result<T>> executeInteractively<I, T>({InvocationParameters parameters = InvocationParameters.emptry, required void Function(I item) onItem, required FutureOr<T> Function(InvocationParameters para) function}) {
-    resurrectObject();
-    final newTask = AsyncExecutor<T>(
-      function: () async {
-        if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
-          return CancelationResult();
-        }
-
-        return await threadInstance.background.executeInteractively<I, T>(function: function, parameters: parameters, onItem: onItem);
-      },
-    );
-    newTask.connectToHeart();
-    _tasks.add(newTask);
-
-    newTask.onDispose.whenComplete(() => _tasks.remove(newTask));
-
-    return newTask.waitResult();
-  }
-
-  @override
-  Future<Result<T>> executeInteractivelyResult<I, T>({
-    InvocationParameters parameters = InvocationParameters.emptry,
-    required void Function(I item) onItem,
-    required FutureOr<Result<T>> Function(InvocationParameters para) function,
-  }) {
-    resurrectObject();
-    final newTask = AsyncExecutor<T>(
-      function: () async {
-        if (LifeCoordinator.tryGetZoneHeart?.itWasDiscarded == true) {
-          return CancelationResult();
-        }
-
-        return await threadInstance.background.executeInteractivelyResult<I, T>(function: function, parameters: parameters, onItem: onItem);
-      },
-    );
-    newTask.connectToHeart();
-    _tasks.add(newTask);
-
-    newTask.onDispose.whenComplete(() => _tasks.remove(newTask));
-
-    return newTask.waitResult();
-  }
-
-  @override
   Future<Result<T>> executeResult<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Result<T>> Function(InvocationParameters para) function}) {
     resurrectObject();
     final newTask = AsyncExecutor<T>(
@@ -158,7 +108,7 @@ class ThreadSymphony with DisposableMixin implements ThreadInvocator {
   }
 
   @override
-  Stream<T> executeStream<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Stream<T>> Function(InvocationParameters para) function}) {
+  Stream<T> executeStream<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Result<Stream<T>>> Function(InvocationParameters para) function}) {
     // TODO: implement executeStream
     throw UnimplementedError();
   }

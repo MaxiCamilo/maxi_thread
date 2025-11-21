@@ -38,8 +38,19 @@ class IsolatorChannelEndPoint with DisposableMixin implements IsolatorChannel {
       sendPoint.send(item);
       return voidResult;
     } catch (ex, st) {
-      
       return ExceptionResult(exception: ex, stackTrace: st);
     }
+  }
+
+  @override
+  Future<Result<void>> waitInitialization({required Duration timeout}) async {
+    if (itWasDiscarded) {
+      return NegativeResult.controller(
+        code: ErrorCode.discontinuedFunctionality,
+        message: FixedOration(message: 'The channel was already close'),
+      );
+    }
+
+    return voidResult;
   }
 }

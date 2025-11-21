@@ -30,11 +30,11 @@ mixin ThreadSingleton {
 
   static ThreadInvocator get server => instance.server;
   static ThreadInvocator get background => instance.background;
+  static ThreadServiceManager get servicesManager => instance.services;
 
-  static Result<ThreadInvocator> service<T extends Object>() => instance.getService<T>();
+  static Result<ThreadServiceInvocator<T>> getService<T extends Object>() => instance.services.getServiceInvocator<T>();
 
-  static T? getEntityThread<T>() => instance.getEntityThread<T>();
   static Future<Result<ThreadInvocator>> createThread({required String name}) => instance.createThread(name: name);
-  static Future<Result<ThreadInvocator>> createServiceThread<T extends Object>({required T item, bool skipIfAlreadyMounted = true, String? name}) =>
-      createServiceThread<T>(item: item, name: name, skipIfAlreadyMounted: skipIfAlreadyMounted);
+  static Future<Result<ThreadServiceInvocator<T>>> createServiceThread<T extends Object>({required T item, bool skipIfAlreadyMounted = true, String? name}) =>
+      instance.services.createServiceThread<T>(item: item, name: name, skipIfAlreadyMounted: skipIfAlreadyMounted);
 }

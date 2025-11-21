@@ -1,3 +1,4 @@
+/*
 mixin ThreadEntity {
   static dynamic _entity;
 
@@ -16,4 +17,4 @@ mixin ThreadEntity {
   static void defineEntity(dynamic item) {
     _entity = item;
   }
-}
+}*/

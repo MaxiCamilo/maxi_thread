@@ -6,15 +6,26 @@ abstract interface class ThreadInvocator {
   Future<Result<T>> execute<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<T> Function(InvocationParameters para) function});
   Future<Result<T>> executeResult<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Result<T>> Function(InvocationParameters para) function});
 
-  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality, required void Function(Oration text) onText});
+  Stream<T> executeStream<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Result<Stream<T>>> Function(InvocationParameters para) function});
 
-  Future<Result<T>> executeInteractively<I, T>({InvocationParameters parameters = InvocationParameters.emptry, required void Function(I item) onItem, required FutureOr<T> Function(InvocationParameters para) function});
+  Future<Result<T>> executeFunctionality<T>({required Functionality<T> functionality});
 
-  Future<Result<T>> executeInteractivelyResult<I, T>({
-    InvocationParameters parameters = InvocationParameters.emptry,
-    required void Function(I item) onItem,
-    required FutureOr<Result<T>> Function(InvocationParameters para) function,
-  });
+  static const Symbol entitySymbol = #maxiThreadInvocatorEntity;
+  static const Symbol originSymbol = #maxiThreadOriginSymbol;
 
-  Stream<T> executeStream<T>({InvocationParameters parameters = InvocationParameters.emptry, required FutureOr<Stream<T>> Function(InvocationParameters para) function});
+  static Result<T> getEntityThread<T>() {
+    final isolated = Zone.current[entitySymbol];
+    if (isolated != null && isolated is T) {
+      return ResultValue(content: isolated);
+    } else {
+      return NegativeResult.controller(
+        code: ErrorCode.implementationFailure,
+        message: FlexibleOration(message: 'This thread does not manage entity %1', textParts: [T]),
+      );
+    }
+  }
+
+  static Result<ThreadInvocator> getOriginThread() {
+    return ResultValue<Object?>(content: Zone.current[originSymbol]).errorIfItsNull<ThreadInvocator>(message: FixedOration(message: 'The source thread has not been defined')).cast<ThreadInvocator>().logIfFails();
+  }
 }

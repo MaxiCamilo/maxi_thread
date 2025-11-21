@@ -34,6 +34,39 @@ class IsolatorChannelInitiationPoint with DisposableMixin implements IsolatorCha
     _confirmationWaiter = null;
   }
 
+  @override
+  Future<Result<void>> waitInitialization({required Duration timeout}) async {
+    if (itWasDiscarded) {
+      return NegativeResult.controller(
+        code: ErrorCode.discontinuedFunctionality,
+        message: FixedOration(message: 'The channel was already close'),
+      );
+    }
+
+    if (_sender != null) return voidResult;
+
+    _confirmationWaiter ??= Completer<bool>();
+    return _confirmationWaiter!.future
+        .toFutureResult()
+        .timeout(
+          timeout,
+          onTimeout: () => NegativeResult.controller(
+            code: ErrorCode.timeout,
+            message: FixedOration(message: 'The channel initialization has timed out'),
+          ),
+        )
+        .onCorrectFuture((confirmed) {
+          if (confirmed) {
+            return voidResult;
+          } else {
+            return NegativeResult.controller(
+              code: ErrorCode.timeout,
+              message: FixedOration(message: 'Could not initialize thread channel'),
+            );
+          }
+        });
+  }
+
   Future<bool> waitConfirmation() async {
     if (itWasDiscarded) return false;
     if (_sender != null) return true;

@@ -7,17 +7,21 @@ import 'package:maxi_thread/src/fake/main_thread_instance.dart';
 import 'package:maxi_thread/src/isolated/channels/isolator_channel_initiation_point.dart';
 import 'package:maxi_thread/src/isolated/clients/isolated_thread_created.dart';
 import 'package:maxi_thread/src/isolated/connections/isolated_thread_connection.dart';
+import 'package:maxi_thread/src/isolated/isolate_stream_manager.dart';
+import 'package:maxi_thread/src/isolated/isolate_thread_instance.dart';
 import 'package:maxi_thread/src/isolated/logic/define_app_manager_in_isolator.dart';
-import 'package:maxi_thread/src/isolated/logic/prepare_service.dart';
 import 'package:maxi_thread/src/isolated/clients/isolated_thread_client.dart';
+import 'package:maxi_thread/src/isolated/remote/isolate_thread_remote_object.dart';
 import 'package:maxi_thread/src/isolated/server/isolate_thread_background_manager.dart';
+import 'package:maxi_thread/src/isolated/server/isolated_services_server_manager.dart';
 
-class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
+class IsolatedThreadServer implements ThreadInstance, IsolatedThread, IsolateThreadInstance {
   final _childs = <IsolatedThreadCreated>[];
-  final _services = <Type, ThreadInvocator>{};
-  final _subClients = <IsolatedThreadConnection>[];
+  final Map<dynamic, dynamic> zoneValues;
 
   IsolateThreadBackgroundManager? _backgroundManager;
+  IsolateThreadRemoteObject? _threadRemoteObject;
+  IsolateStreamManager? _streamManager;
 
   @override
   ThreadInvocator get server => const MainThreadInstance();
@@ -29,39 +33,25 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
   }
 
   @override
-  T? getEntityThread<T>() => null;
+  ThreadRemoteObjectManager get remoteObjects {
+    _threadRemoteObject ??= IsolateThreadRemoteObject();
+    return _threadRemoteObject!;
+  }
 
   @override
-  Future<Result<ThreadInvocator>> createServiceThread<T extends Object>({required T item, bool skipIfAlreadyMounted = true, String? name}) async {
-    final actualInstance = _services[T];
-    if (actualInstance != null) {
-      if (skipIfAlreadyMounted) {
-        return ResultValue(content: actualInstance);
-      } else {
-        return NegativeResult.controller(
-          code: ErrorCode.implementationFailure,
-          message: FlexibleOration(message: 'Service %1 has already been mounted', textParts: [T]),
-        );
-      }
-    }
+  IsolateStreamManager get streamManager {
+    _streamManager ??= IsolateStreamManager(parent: this);
+    return _streamManager!;
+  }
 
-    if (name == null && item is ThreadService) {
-      name = item.serviceName;
-    } else {
-      name ??= T.toString();
-    }
-    final threadResult = await createThread(name: name);
-    if (threadResult.itsFailure) return threadResult.cast();
+  @override
+  int get identifier => 0;
 
-    final initResult = await PrepareService(service: getService()).inThread(threadResult.content);
-    if (initResult.itsCorrect) {
-      _services[T] = threadResult.content;
-      threadResult.content.onDispose.whenComplete(() => _services.remove(T));
-      return ResultValue(content: threadResult.content);
-    } else {
-      threadResult.content.closeThread();
-      return initResult.cast();
-    }
+  @override
+  late final IsolatedServicesServerManager services;
+
+  IsolatedThreadServer({this.zoneValues = const {}}) {
+    services = IsolatedServicesServerManager(invocator: this);
   }
 
   @override
@@ -74,7 +64,8 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
     }
 
     final point = IsolatorChannelInitiationPoint();
-    final isolate = await Isolate.spawn(_prepareThread, point.output, debugName: name, errorsAreFatal: false);
+    final id = _childs.length + 1;
+    final isolate = await Isolate.spawn(_prepareThread, (point.output, id), debugName: name, errorsAreFatal: false);
     if (!await point.waitConfirmation()) {
       return NegativeResult.controller(
         code: ErrorCode.implementationFailure,
@@ -82,8 +73,8 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
       );
     }
 
-    final connection = IsolatedThreadConnection(channel: point);
-    final instance = IsolatedThreadCreated(isolate: isolate, communicator: connection);
+    final connection = IsolatedThreadConnection(channel: point, instance: this, zoneValues: zoneValues);
+    final instance = IsolatedThreadCreated(identifier: id, isolate: isolate, communicator: connection);
     _childs.add(instance);
 
     connection.onDispose.whenComplete(() => _childs.remove(instance));
@@ -99,27 +90,14 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
     return ResultValue(content: connection);
   }
 
-  static Future<void> _prepareThread(SendPort point) async {
+  static Future<void> _prepareThread((SendPort, int) content) async {
     try {
-      ThreadSingleton.changeInstance(IsolatedThreadClient(point));
+      ThreadSingleton.changeInstance(IsolatedThreadClient(serverPort: content.$1, identifier: content.$2));
     } catch (ex) {
       log(ex.toString());
       Future.delayed(const Duration(milliseconds: 20)).whenComplete(() {
         Isolate.exit();
       });
-    }
-  }
-
-  @override
-  Result<ThreadInvocator> getService<T extends Object>() {
-    final item = _services[T];
-    if (item == null) {
-      return NegativeResult.controller(
-        code: ErrorCode.implementationFailure,
-        message: FlexibleOration(message: 'Service %1 has not been mounted yet', textParts: [T]),
-      );
-    } else {
-      return ResultValue(content: item);
     }
   }
 
@@ -130,11 +108,7 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
       item.communicator.dispose();
     }
 
-    _subClients.lambda((x) => x.dispose());
-
-    _subClients.clear();
     _childs.clear();
-    _services.clear();
 
     _backgroundManager?.dispose();
     _backgroundManager = null;
@@ -144,14 +118,26 @@ class IsolatedThreadServer implements ThreadInstance, IsolatedThread {
 
   @override
   Future<Result<SendPort>> getNewSendPortFromThread() async {
-    log('[IsolatedThreadServer] This is a thread Server!');
+    return NegativeResult.controller(
+      code: ErrorCode.implementationFailure,
+      message: FixedOration(message: '[IsolatedThreadServer] This is a thread Server!'),
+    );
+  }
 
-    final point = IsolatorChannelInitiationPoint();
-    final connection = IsolatedThreadConnection(channel: point);
+  @override
+  Future<Result<IsolatedThreadConnection>> getInvocatorByID({required int identifier}) async {
+    if (identifier == 0) {
+      return asResultValue();
+    }
 
-    _subClients.add(connection);
-    connection.onDispose.whenComplete(() => _subClients.remove(connection));
-
-    return ResultValue(content: point.output);
+    final exists = _childs.selectItem((x) => x.identifier == identifier);
+    if (exists == null) {
+      return NegativeResult.controller(
+        code: ErrorCode.nonExistent,
+        message: FixedOration(message: 'A thread with identifier %1 does not exist'),
+      );
+    } else {
+      return exists.communicator.asResultValue();
+    }
   }
 }
