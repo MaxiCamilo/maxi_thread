@@ -26,6 +26,6 @@ abstract interface class ThreadInvocator {
   }
 
   static Result<ThreadInvocator> getOriginThread() {
-    return ResultValue<Object?>(content: Zone.current[originSymbol]).errorIfItsNull<ThreadInvocator>(message: FixedOration(message: 'The source thread has not been defined')).cast<ThreadInvocator>().logIfFails();
+    return ResultValue<Object?>(content: Zone.current[originSymbol]).asResErrorIfItsNull<ThreadInvocator>(message: FixedOration(message: 'The source thread has not been defined')).cast<ThreadInvocator>().logIfFails();
   }
 }

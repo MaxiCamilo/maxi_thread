@@ -68,7 +68,7 @@ class ThreadObjectReference<T> with AsynchronouslyInitializedMixin implements Re
     final item = await ThreadInstance.getIsolatedInstance().onCorrectFuture((x) => x.remoteObjects.obtainObject<T>(name: para.firts<Symbol>())).onCorrectFuture((x) => x.getItem());
     if (item.itsFailure) return item.cast();
 
-    return await function(item.content, para).catchException();
+    return await function(item.content, para).asResCatchException();
   }
 
   @override

@@ -12,7 +12,7 @@ class FakeThreadServicesManager implements ThreadServiceManager {
   Result<ThreadServiceInvocator<T>> getServiceInvocator<T extends Object>() {
     final intanceResult = _instances
         .selectItem((x) => x.isCompatible(T))
-        .errorIfItsNull(
+        .asResErrorIfItsNull(
           message: FlexibleOration(message: 'The service %1 has not been mounted previously', textParts: [T]),
         );
 
