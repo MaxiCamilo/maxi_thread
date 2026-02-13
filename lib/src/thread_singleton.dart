@@ -1,40 +1,59 @@
 import 'package:maxi_framework/maxi_framework.dart';
-import 'package:maxi_thread/maxi_thread.dart';
-import 'package:maxi_thread/src/fake/fake_thread_instance.dart';
-import 'package:maxi_thread/src/isolated/server/isolated_thread_server.dart';
+import 'package:maxi_thread/src/entity_thread_connection.dart';
+import 'package:maxi_thread/src/thread_connection.dart';
+import 'package:maxi_thread/src/thread_manager.dart';
 
-mixin ThreadSingleton {
-  static ThreadInstance? _instance;
+ThreadManager threadSystem = const ThreadManagerInitializer();
 
-  static ThreadInstance get instance {
-    if (_instance == null) {
-      if (ApplicationManager.singleton.isWeb) {
-        changeInstance(FakeThreadInstance());
-      } else {
-        changeInstance(IsolatedThreadServer());
-      }
-    }
-    return _instance!;
+class ThreadManagerInitializer implements ThreadManager {
+  const ThreadManagerInitializer();
+
+  @override
+  FutureResult<EntityThreadConnection<T>> createEntityThread<T>({required T instance, bool omitIfExists = true}) {
+    // TODO: implement createEntityThread
+    throw UnimplementedError();
   }
 
-  static void changeInstance(ThreadInstance instance) {
-    if (_instance != null && _instance is Disposable) {
-      (_instance as Disposable).dispose();
-    }
+  @override
+  // TODO: implement identifier
+  int get identifier => throw UnimplementedError();
 
-    _instance = instance;
-    if (instance is Disposable) {
-      (instance as Disposable).onDispose.whenComplete(() => _instance = null);
-    }
+  @override
+  // TODO: implement serverConnection
+  ThreadConnection get serverConnection => throw UnimplementedError();
+
+  @override
+  EntityThreadConnection<T> service<T>() {
+    // TODO: implement service
+    throw UnimplementedError();
   }
 
-  static ThreadInvocator get server => instance.server;
-  static ThreadInvocator get background => instance.background;
-  static ThreadServiceManager get servicesManager => instance.services;
+  @override
+  FutureResult<ThreadConnection> createThread({List<Functionality> initializers = const []}) {
+    // TODO: implement createThread
+    throw UnimplementedError();
+  }
 
-  static Result<ThreadServiceInvocator<T>> getService<T extends Object>() => instance.services.getServiceInvocator<T>();
+  @override
+  void dispose() {
+    // TODO: implement dispose
+  }
 
-  static Future<Result<ThreadInvocator>> createThread({required String name}) => instance.createThread(name: name);
-  static Future<Result<ThreadServiceInvocator<T>>> createServiceThread<T extends Object>({required T item, bool skipIfAlreadyMounted = true, String? name}) =>
-      instance.services.createServiceThread<T>(item: item, name: name, skipIfAlreadyMounted: skipIfAlreadyMounted);
+  @override
+  // TODO: implement itWasDiscarded
+  bool get itWasDiscarded => throw UnimplementedError();
+
+  @override
+  // TODO: implement name
+  String get name => throw UnimplementedError();
+
+  @override
+  FutureResult<ThreadConnection> obtainConnectionFromIdentifier({required int threadIdentifier}) {
+    // TODO: implement obtainConnectionFromIdentifier
+    throw UnimplementedError();
+  }
+
+  @override
+  // TODO: implement onDispose
+  Future<dynamic> get onDispose => throw UnimplementedError();
 }

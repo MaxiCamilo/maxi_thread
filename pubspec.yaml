@@ -1,5 +1,5 @@
 name: maxi_thread
-description: A starting point for Dart libraries or applications.
+description: Base threading system for Dart and Flutter that enables background task execution, easing concurrency management and improving application performance. It abstracts background execution for systems that support concurrency and those that cannot (e.g. web)
 version: 1.0.0
 publish_to: none
 # repository: https://github.com/my_org/my_repo
