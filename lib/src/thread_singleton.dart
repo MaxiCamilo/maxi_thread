@@ -1,59 +1,71 @@
+import 'dart:developer';
+
 import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/src/entity_thread_connection.dart';
 import 'package:maxi_thread/src/thread_connection.dart';
 import 'package:maxi_thread/src/thread_manager.dart';
 
-ThreadManager threadSystem = const ThreadManagerInitializer();
+import 'factories/native_thread_factory.dart' if (dart.library.html) 'factories/fake_thread_factory.dart';
+
+ThreadManager _kThreadSystem = const ThreadManagerInitializer();
+
+ThreadManager get threadSystem => _kThreadSystem;
+set threadSystem(ThreadManager newSystem) {
+  if (!_kThreadSystem.itWasDiscarded) {
+    log('[ThreadSingleton -> threadSystem] Warning: Reassigning threadSystem while the previous one was not discarded. This may lead to unexpected behavior.', name: 'ThreadSingleton');
+  }
+  _kThreadSystem = newSystem;
+}
 
 class ThreadManagerInitializer implements ThreadManager {
   const ThreadManagerInitializer();
 
-  @override
-  FutureResult<EntityThreadConnection<T>> createEntityThread<T>({required T instance, bool omitIfExists = true}) {
-    // TODO: implement createEntityThread
-    throw UnimplementedError();
+  ThreadManager _defineThreadSystem() {
+    final newThread = buildThreadManager();
+    threadSystem = newThread;
+    return newThread;
   }
 
   @override
-  // TODO: implement identifier
-  int get identifier => throw UnimplementedError();
+  FutureResult<EntityThreadConnection<T>> createEntityThread<T>({required T instance, bool omitIfExists = true}) {
+    return _defineThreadSystem().createEntityThread<T>(instance: instance, omitIfExists: omitIfExists);
+  }
 
   @override
-  // TODO: implement serverConnection
-  ThreadConnection get serverConnection => throw UnimplementedError();
+  int get identifier => _defineThreadSystem().identifier;
+
+  @override
+  ThreadConnection get serverConnection => _defineThreadSystem().serverConnection;
 
   @override
   EntityThreadConnection<T> service<T>() {
-    // TODO: implement service
-    throw UnimplementedError();
+    return _defineThreadSystem().service<T>();
   }
 
   @override
-  FutureResult<ThreadConnection> createThread({List<Functionality> initializers = const []}) {
-    // TODO: implement createThread
-    throw UnimplementedError();
-  }
+  void dispose() {}
 
   @override
-  void dispose() {
-    // TODO: implement dispose
-  }
+  bool get itWasDiscarded => true;
 
   @override
-  // TODO: implement itWasDiscarded
-  bool get itWasDiscarded => throw UnimplementedError();
-
-  @override
-  // TODO: implement name
-  String get name => throw UnimplementedError();
+  String get name => _defineThreadSystem().name;
 
   @override
   FutureResult<ThreadConnection> obtainConnectionFromIdentifier({required int threadIdentifier}) {
-    // TODO: implement obtainConnectionFromIdentifier
-    throw UnimplementedError();
+    return _defineThreadSystem().obtainConnectionFromIdentifier(threadIdentifier: threadIdentifier);
   }
 
   @override
-  // TODO: implement onDispose
-  Future<dynamic> get onDispose => throw UnimplementedError();
+  Future<dynamic> get onDispose => _defineThreadSystem().onDispose;
+
+  @override
+  FutureResult<ThreadConnection> createThread({required String name, List<Functionality<dynamic>> initializers = const []}) {
+    return _defineThreadSystem().createThread(name: name, initializers: initializers);
+  }
+
+  @override
+  Result<T> getThreadEntity<T>() {
+    return _defineThreadSystem().getThreadEntity<T>();
+  }
 }

@@ -8,194 +8,108 @@ import 'package:maxi_thread/maxi_thread.dart';
 import 'package:test/test.dart';
 
 import 'entities/first_service.dart';
+import 'entities/second_service.dart';
+import 'entities/third_service.dart';
 
 void main() {
   group('Isolate test', () {
-    setUp(() async {
-      final appResult = await ApplicationManager.defineSingleton(DartApplicationManager());
-      if (appResult.itsFailure) {
-        throw appResult.error;
-      }
-    });
+    setUp(() async {});
 
-    test('Invocation Test', () async {
-      final threadResult = await ThreadSingleton.createThread(name: 'Hola');
-      if (threadResult.itsFailure) {
-        throw threadResult.error;
+    test('Mount isolate', () async {
+      final newThreadResult = await threadSystem.createThread(name: 'First Test');
+      if (newThreadResult.itsFailure) {
+        fail('Failed to create thread: ${newThreadResult.error}');
       }
-
-      final thread = threadResult.content;
+      final thread = newThreadResult.content;
       final result = await thread.execute(
-        function: (para) async {
-          print('Hi maxi!');
-          await Future.delayed(const Duration(seconds: 5));
-          print('Bye maxi!');
-          return 'byebye';
-        },
-      );
-      if (result.itsFailure) {
-        throw threadResult.error;
-      }
-
-      print(result.content);
-
-      final anotherResult = await thread.executeResult(
         function: (para) {
-          print('Juajua');
-          return voidResult;
+          log('Executing function in isolate', name: 'Isolate test');
+          return 'Hello from isolate';
         },
       );
-      if (anotherResult.itsFailure) {
-        throw threadResult.error;
-      }
-
-      if (thread is IsolatedThread) {
-        await (thread as IsolatedThread).closeThread();
-      }
-      await Future.delayed(const Duration(seconds: 5));
+      expect(result.itsCorrect, true);
+      expect(result.content, 'Hello from isolate');
     });
 
-    test('Cancel function', () async {
-      await managedFunction((heart) async {
-        final threadResult = await ThreadSingleton.createThread(name: 'Hola');
-        if (threadResult.itsFailure) {
-          throw threadResult.error;
-        }
+    test('Communication between 2 client threads', () async {
+      final thread1Result = await threadSystem.createThread(name: 'Thread 1');
+      final thread2Result = await threadSystem.createThread(name: 'Thread 2');
 
-        final thread = threadResult.content;
-        final future = thread.execute(
-          function: (para) async {
-            print('Hi maxi!');
-            await LifeCoordinator.zoneHeart.delay(duration: const Duration(seconds: 60));
-            if (LifeCoordinator.isZoneHeartCanceled) {
-              return CancelationResult();
-            }
-            print('Bye maxi!');
-            return 'byebye';
-          },
-        );
-
-        await Future.delayed(const Duration(seconds: 5)).whenComplete(() {
-          heart.dispose();
-        });
-
-        final result = await future;
-
-        print(result);
-        return result;
-      });
-
-      await Future.delayed(const Duration(seconds: 10));
-    });
-
-    test('Interactive function', () async {
-      final threadResult = await ThreadSingleton.createThread(name: 'Hola');
-      if (threadResult.itsFailure) {
-        throw threadResult.error;
+      if (thread1Result.itsFailure) {
+        fail('Failed to create Thread 1: ${thread1Result.error}');
+      }
+      if (thread2Result.itsFailure) {
+        fail('Failed to create Thread 2: ${thread2Result.error}');
       }
 
-      final thread = threadResult.content;
-
-      final result = await thread.executeTextable(
-        onText: (item) => print('Event $item'),
+      final result = await thread1Result.content.executeResult(
+        parameters: InvocationParameters.only(thread2Result.content.identifier),
         function: (para) async {
-          InteractiveSystem.sendItem(FixedOration(message: 'Hi maxi!'));
-          await LifeCoordinator.zoneHeart.delay(duration: const Duration(seconds: 3));
-          InteractiveSystem.sendItem(FlexibleOration(message: 'let\'s wait %1 seconds', textParts: [3]));
-          await LifeCoordinator.zoneHeart.delay(duration: const Duration(seconds: 3));
-          InteractiveSystem.sendItem(FixedOration(message: 'Good bye!'));
-
-          return 'byebye';
+          final thread2Id = para.first<int>();
+          final thread2ConnectionResult = await threadSystem.obtainConnectionFromIdentifier(threadIdentifier: thread2Id);
+          if (thread2ConnectionResult.itsFailure) {
+            return thread2ConnectionResult.cast();
+          }
+          final thread2Connection = thread2ConnectionResult.content;
+          await Future.delayed(const Duration(seconds: 5));
+          return await thread2Connection.execute(
+            function: (para) {
+              log('Executing function in Thread 2 from Thread 1', name: 'Isolate test');
+              return 'Hello from Thread 2';
+            },
+          );
         },
       );
 
-      print(result);
-
-      if (thread is IsolatedThread) {
-        await (thread as IsolatedThread).closeThread();
+      if (result.itsFailure) {
+        fail('Failed to execute function in Thread 1: ${result.error}');
       }
-
-      await Future.delayed(const Duration(seconds: 1));
     });
 
-    test(
-      'Mount and use service',
-      () => InteractiveSystem.catchText<void>(
-        onText: (item) => print('Event $item'),
-        function: () async {
-          final mountResult = await ThreadSingleton.createServiceThread<FirstService>(item: FirstService());
-          if (mountResult.itsFailure) {
-            throw mountResult.error;
-          }
+    test('Mounth service', () async {
+      final newSevice = await threadSystem.createEntityThread<FirstService>(instance: FirstService());
+      if (newSevice.itsFailure) {
+        fail('Failed to create service thread: ${newSevice.error}');
+      }
 
-          final gettingResult = await ThreadSingleton.getService<FirstService>().onCorrectFuture(
-            (x) => x.executeResult(parameters: InvocationParameters.only('Seba'), function: (serv, para) => serv.greet(para.firts<String>())),
-          );
-          print(gettingResult);
+      final invocationResult = await threadSystem.service<FirstService>().executeResult(function: (serv, para) => serv.sayHi());
+      if (invocationResult.itsFailure) {
+        fail('Failed to invoke service function: ${invocationResult.error}');
+      }
+      log('Service invocation result: ${invocationResult.content}', name: 'Isolate test');
+    });
 
-          final gettingResult2 = await ThreadSingleton.getService<FirstService>().onCorrectFuture(
-            (x) => x.executeResult(parameters: InvocationParameters.only('Takara'), function: (serv, para) => serv.greet(para.firts<String>())),
-          );
-          print(gettingResult2);
+    test('Interactive Service', () async {
+      await threadSystem.createEntityThread<FirstService>(instance: FirstService());
+      await threadSystem.createEntityThread<SecondService>(instance: SecondService());
 
-          final externalMountResult = await ThreadSingleton.getService<FirstService>().onCorrectFuture((x) => x.executeResult(function: (serv, para) => serv.mountSecondService()));
-          print(externalMountResult);
+      final creationResult = await threadSystem.service<SecondService>().executeResult(function: (serv, para) => serv.requestThirdService());
+      if (creationResult.itsFailure) {
+        fail('Failed to request ThirdService from SecondService: ${creationResult.error}');
+      }
 
-          final externalCall = await ThreadSingleton.getService<FirstService>().onCorrectFuture((x) => x.executeResult(function: (serv, para) => serv.callThirdService(5)));
-          print(externalCall);
+      final firstServerInvocationResult = await threadSystem.service<FirstService>().executeResult(function: (serv, para) => serv.sayHiFromThridService());
+      if (firstServerInvocationResult.itsFailure) {
+        fail('Failed to invoke sayHiFromThridService from FirstService: ${firstServerInvocationResult.error}');
+      } else {
+        log('FirstService sayHiFromThridService result: ${firstServerInvocationResult.content}', name: 'Isolate test');
+      }
+    });
 
-          final externalTimeout = await managedFunction(
-            (_) => ThreadSingleton.getService<FirstService>().onCorrectFuture((x) => x.executeResult(function: (serv, para) => serv.callThirdService(999))).cancelIn(timeout: const Duration(seconds: 2)),
-          );
+    test('Test Channels', () async {
+      await threadSystem.createEntityThread<FirstService>(instance: FirstService());
+      await threadSystem.createEntityThread<SecondService>(instance: SecondService());
+      await threadSystem.createEntityThread<ThirdService>(instance: ThirdService(name: 'Third Service from server channel'));
 
-          print(externalTimeout);
-          await Future.delayed(Duration(seconds: 20));
-        },
-      ),
-    );
+      final invocationResult = await threadSystem.service<FirstService>().executeResult(function: (serv, para) => serv.sayHi());
+      if (invocationResult.itsFailure) {
+        fail('Failed to invoke service function: ${invocationResult.error}');
+      }
 
-    test(
-      'Test Steams',
-      () => InteractiveSystem.catchText<void>(
-        onText: (item) => print('Event $item'),
-        function: () async {
-          final mountResult = await ThreadSingleton.createServiceThread<FirstService>(item: FirstService());
-          if (mountResult.itsFailure) {
-            throw mountResult.error;
-          }
-
-          final streamResult = ThreadSingleton.instance.services.getServiceInvocator<FirstService>().select((x) => x.executeStream<String>(function: (serv, para) => serv.streamText().asResultValue()));
-
-          if (streamResult.itsFailure) throw streamResult.cast();
-
-          final subscriptionResult = await streamResult.content.waitFinish(
-            onData: (event) {
-              InteractiveSystem.sendItem(FixedOration(message: event));
-            },
-            onError: (ex, st) => log('[ERROR!] $ex\n$st'),
-            onDone: () => log('Stream closed'),
-          );
-
-          if (subscriptionResult.itsFailure) throw subscriptionResult;
-
-          await Future.delayed(const Duration(seconds: 5));
-
-          final anotherStreamResult = ThreadSingleton.instance.services.getServiceInvocator<FirstService>().select((x) => x.executeStream<String>(function: (serv, para) => serv.streamText().asResultValue()));
-          await anotherStreamResult.content
-              //.cancelIn(timeout: const Duration(seconds: 4))
-              .timeout(const Duration(seconds: 4), onTimeout: (sink) => sink.close())
-              .waitFinish(
-                onData: (event) {
-                  InteractiveSystem.sendItem(FixedOration(message: event));
-                },
-                onError: (ex, st) => log('[ERROR!] $ex\n$st'),
-                onDone: () => log('Stream closed'),
-              )
-              .logIfFails(errorName: 'Another Stream');
-
-          await Future.delayed(const Duration(seconds: 90));
-        },
-      ),
-    );
+      final result = await threadSystem.service<SecondService>().executeResult(function: (serv, para) => serv.createChannel());
+      if (result.itsFailure) {
+        fail('Failed to create channel from SecondService: ${result.error}');
+      }
+    });
   });
 }

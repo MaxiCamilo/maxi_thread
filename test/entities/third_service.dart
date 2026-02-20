@@ -1,23 +1,40 @@
-import 'dart:math';
+import 'dart:async';
+import 'dart:developer';
 
 import 'package:maxi_framework/maxi_framework.dart';
-import 'package:maxi_thread/maxi_thread.dart';
 
-class ThirdService implements ThreadService {
-  @override
-  String get serviceName => 'Third Service';
+class ThirdService {
+  final String name;
 
-  const ThirdService();
+  ThirdService({required this.name});
 
-  Future<Result<int>> magicNumber([int seconds = 5]) async {
-    InteractiveSystem.sendItem(FixedOration(message: 'Your magic number is...'));
+  Result<String> sayHi() {
+    return 'Hola Hola desde el tercer hilo, en español obvio'.asResultValue();
+  }
 
-    await LifeCoordinator.zoneHeart.delay(duration: Duration(seconds: seconds))/*.makeCancelable(timeout: const Duration(seconds: 5))*/;
+  Result<Channel<int, String>> createRandomChannel() {
+    final channel = MasterChannel<String, int>();
+    scheduleMicrotask(() async {
+      await Future.delayed(const Duration(seconds: 10));
+      log('Starting to send data through the channel', name: 'ThirdService');
+      channel
+          .getReceiver()
+          .onCorrectLambda(
+            (x) => x.listen((text) {
+              log('Client sent: $text', name: 'ThirdService');
+            }),
+          )
+          .logIfFails(errorName: 'ThirdService -> createRandomChannel: Failed to listen to channel receiver');
+      channel.sendItem(0);
 
-    if (LifeCoordinator.isZoneHeartCanceled) {
-      return CancelationResult();
-    }
+      for (int i = 1; i <= 10; i++) {
+        await Future.delayed(const Duration(seconds: 1));
+        channel.sendItem(i);
+      }
 
-    return ResultValue(content: Random().nextInt(99));
+      channel.dispose();
+    });
+
+    return channel.buildConnector();
   }
 }

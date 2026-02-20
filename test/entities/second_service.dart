@@ -1,31 +1,37 @@
+import 'dart:async';
+import 'dart:developer';
+
 import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/maxi_thread.dart';
 
 import 'third_service.dart';
 
-class SecondService with AsynchronouslyInitializedMixin implements ThreadService {
-  @override
-  String get serviceName => 'Second Service';
+class SecondService {
+  FutureResult<void> requestThirdService() async {
+    final servResult = await threadSystem.createEntityThread<ThirdService>(instance: ThirdService(name: 'Third Service from Second Service'));
+    if (servResult.itsFailure) {
+      return servResult.cast();
+    }
 
-  @override
-  Future<Result<void>> performInitialize() async {
-    print('Initializing Second Service...');
-
-    InteractiveSystem.sendItem(FixedOration(message: 'Second Service is starting!'));
-
-    await LifeCoordinator.rootZoneHeart.delay(duration: const Duration(seconds: 1));
-
-    print('Second Service is ready!');
-    InteractiveSystem.sendItem(FixedOration(message: 'Second Service is ready!'));
-
-    final thirdServiceResult = await ThreadSingleton.createServiceThread(item: ThirdService());
-    if (thirdServiceResult.itsFailure) return thirdServiceResult.cast();
+    final callResult = await servResult.content.executeResult(function: (serv, para) => serv.sayHi());
+    if (callResult.itsFailure) {
+      return callResult.cast();
+    }
 
     return voidResult;
   }
 
-  Result<String> callMeBaby() {
-    InteractiveSystem.sendItem(FixedOration(message: 'Hi beuty!'));
-    return '😘'.asResultValue();
+  FutureResult<void> createChannel() {
+    return threadSystem
+        .service<ThirdService>()
+        .buildChannel(function: (serv, para) => serv.createRandomChannel())
+        .injectLogic(
+          (x) => x.getReceiver().onCorrectLambda(
+            (y) => y.listen((data) {
+              log('Received data in ThirdService channel: $data', name: 'SecondService');
+            }),
+          ),
+        )
+        .onCorrectFutureVoid((x) async => await x.onDispose);
   }
 }
