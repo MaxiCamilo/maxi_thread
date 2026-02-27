@@ -57,7 +57,10 @@ class EntityThreadMaskConnection<T> with AsynchronouslyInitializedMixin implemen
   }
 
   @override
-  FutureResult<Channel<S, R>> buildChannel<R, S>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<Channel<R, S>>> Function(T serv, InvocationParameters para) function}) async {
-    return initialize().onCorrectFuture((_) => _isolateConnection.buildChannel(function: function, parameters: parameters));
+  FutureResult<Channel<S, R>> buildChannel<R, S>({
+    InvocationParameters parameters = InvocationParameters.empty,
+    required FutureOr<Result<dynamic>> Function(T serv, Channel<R, S> channel, InvocationParameters para) function,
+  }) {
+    return initialize().onCorrectFuture((_) => _isolateConnection.buildChannel(parameters: parameters, function: function));
   }
 }

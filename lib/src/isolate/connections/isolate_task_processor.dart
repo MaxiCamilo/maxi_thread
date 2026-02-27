@@ -9,7 +9,12 @@ import 'package:maxi_thread/src/thread_manager.dart';
 import 'package:maxi_thread/src/thread_singleton.dart';
 import 'package:rxdart/rxdart.dart';
 
-/// Represents a processor for handling tasks received through an isolator channel in an isolate thread. It listens for incoming task requests, executes the corresponding functions, and sends back the results or errors through the channel. The `IsolateTaskProcessor` class manages the lifecycle of tasks and ensures proper communication between threads in an isolated environment.
+/// Processes and manages task execution within an isolate thread.
+///
+/// Handles incoming task requests through an [IsolatorChannel], executes them asynchronously,
+/// and communicates results back to the sender. Manages concurrent task execution, handles task
+/// cancellation, and provides lifecycle management through disposal mechanisms. Each task is
+/// assigned a unique ID for tracking and communication purposes.
 class IsolateTaskProcessor with DisposableMixin, LifecycleHub {
   /// The [channel] through which the processor receives task requests and sends back results or errors.
   final IsolatorChannel channel;
@@ -30,7 +35,9 @@ class IsolateTaskProcessor with DisposableMixin, LifecycleHub {
     channel.stream.whereType<IsolateMessageRequest>().listen(_processRequest, onDone: dispose);
   }
 
-  /// Handles the execution of a task by sending a confirmation message back to the sender, creating an `AsyncExecutor` for the task, and managing the communication of results or errors through the channel. The method takes a function that defines the logic to be executed for the task, and it ensures that the results are sent back to the sender in a structured manner, allowing for effective handling of concurrent tasks within the isolate thread.
+  /// Confirms and executes a task by assigning it a unique ID, sending a confirmation message,
+  /// executing the provided function, and communicating the result back through the channel.
+  /// Manages the task lifecycle including disposal and error handling.
   Future<void> _confirmTask(FutureOr<Result> Function(int id) function) async {
     final id = _lastTaskId;
     _lastTaskId += 1;
@@ -66,11 +73,29 @@ class IsolateTaskProcessor with DisposableMixin, LifecycleHub {
     final sendResult = channel.send(IsolateMessageStatus(type: IsolateMessageStatusType.executeResult, id: id, payload: result));
     if (sendResult.itsFailure) {
       log('[IsolateTaskProcessor] Failed to send an execution result message for task with id $id in thread $threadName. Error: $sendResult');
+      channel
+          .send(
+            IsolateMessageStatus(
+              type: IsolateMessageStatusType.executeResult,
+              id: id,
+              payload: NegativeResult.controller(
+                code: ErrorCode.wrongType,
+                message: FlexibleOration(message: 'Failed to send the result of a task between threads, it appears to be a native object', textParts: [result.runtimeType.toString()]),
+              ),
+            ),
+          )
+          .logIfFails(errorName: 'IsolateTaskProcessor -> _confirmTask: Failed to send negative result message');
       return;
     }
+    
   }
 
-  /// Processes incoming task requests by determining the type of request and executing the corresponding logic. For "createFunction" requests, it creates a new task using the provided function and manages its execution. For "cancel" requests, it disposes of the corresponding task to stop its execution. The method also handles any errors that may occur during the processing of requests and logs them for debugging purposes. It ensures that the processor can effectively manage and respond to various types of task requests within the isolate thread, facilitating efficient handling of concurrent operations and communication between threads.
+  /// Routes incoming task requests to the appropriate handler based on the request type.
+  ///
+  /// Processes [IsolateMessageRequest] events by switching on the request type:
+  /// - [IsolateMessageRequestType.createFunction]: Creates and executes a new task function
+  /// - [IsolateMessageRequestType.message]: Not supported, throws [UnimplementedError]
+  /// - [IsolateMessageRequestType.cancel]: Cancels the task with the specified ID
   void _processRequest(IsolateMessageRequest event) {
     switch (event.type) {
       case IsolateMessageRequestType.createFunction:
@@ -84,7 +109,10 @@ class IsolateTaskProcessor with DisposableMixin, LifecycleHub {
     }
   }
 
-  /// Handles the creation of a new task based on the incoming request by executing the provided function and managing the communication of results or errors through the channel. The method takes an `IsolateMessageRequest` event, extracts the function to be executed from the payload, and uses the `_confirmTask` method to manage the execution and communication of results for the new task. It ensures that tasks are created and executed efficiently within the isolate thread, allowing for effective handling of concurrent operations and communication between threads.
+  /// Extracts the function from the request payload and executes it as a confirmed task.
+  ///
+  /// Unwraps the [IsolateMessageResultFunction] from the event payload and passes it to
+  /// [_confirmTask] for execution with proper ID assignment, tracking, and result communication.
   void _createFunction(IsolateMessageRequest event) {
     _confirmTask((int id) async {
       final content = event.payload as IsolateMessageResultFunction;

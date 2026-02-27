@@ -45,14 +45,15 @@ class UnsupportedThreadConnection implements ThreadConnection {
       message: const FixedOration(message: 'Pointing to a non-existent or discarded connection'),
     );
   }
-  
+
   @override
-  FutureResult<Channel<S, R>> buildChannel<R, S>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<Channel<R, S>>> Function(InvocationParameters para) function}) async{
+  FutureResult<Channel<S, R>> buildChannel<R, S>({
+    InvocationParameters parameters = InvocationParameters.empty,
+    required FutureOr<Result<void>> Function(Channel<R, S> channel, InvocationParameters para) function,
+  }) async {
     return NegativeResult.controller(
       code: ErrorCode.implementationFailure,
       message: const FixedOration(message: 'Pointing to a non-existent or discarded connection'),
     );
   }
-
- 
 }

@@ -188,4 +188,6 @@ class IsolatedThreadServer extends IsolatedThread {
       message: const FixedOration(message: 'Cannot get thread entity: only isolate thread client can process this request'),
     );
   }
+  
+  
 }

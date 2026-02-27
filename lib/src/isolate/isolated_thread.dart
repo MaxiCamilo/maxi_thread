@@ -4,7 +4,7 @@ import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/src/entity_thread_connection.dart';
 import 'package:maxi_thread/src/isolate/communication/isolator_channel_initiation_point.dart';
 import 'package:maxi_thread/src/isolate/connections/isolate_thread_connection.dart';
-import 'package:maxi_thread/src/isolate/operators/isolate_thread_channel_manager.dart';
+import 'package:maxi_thread/src/isolate/channels/isolate_thread_channel_manager.dart';
 import 'package:maxi_thread/src/thread_connection.dart';
 import 'package:maxi_thread/src/thread_manager.dart';
 import 'package:maxi_thread/src/thread_singleton.dart';
@@ -23,6 +23,8 @@ abstract class IsolatedThread with DisposableMixin, LifecycleHub implements Thre
   /// The channel manager is responsible for managing communication channels with the isolate thread, allowing for the creation and management of channels that facilitate communication between the main thread and the isolate thread. This component plays a crucial role in enabling effective communication and coordination between threads in a multi-threaded application, ensuring that resources are properly managed and that communication channels are established and maintained effectively.
   final channelManager = IsolateThreadChannelManager();
 
+  final _threadData = <String, Object>{};
+
   @protected
   /// Creates a send port for communication with the isolate thread. If the thread has been discarded, it returns a negative result indicating that the thread is no longer available. Otherwise, it creates a new initiation point for the isolator channel, adds it to the pending connections, and waits for confirmation of its initialization. Once confirmed, it creates a channel from the pending initiation point and returns the send port for communication with the isolate thread. This method allows for effective management of communication channels with the isolate thread while handling potential errors and ensuring that operations are not performed on a discarded thread.
   Result<SendPort> createSendPort() {
@@ -36,13 +38,20 @@ abstract class IsolatedThread with DisposableMixin, LifecycleHub implements Thre
 
     pendingConnections.add(pending);
 
-    /// Waits for confirmation of the initialization of the pending connection. Once confirmed, it creates a channel from the pending initiation point and logs any errors that occur during the initialization process. This ensures that the communication channel is properly established and that any issues are appropriately handled, allowing for effective communication with the isolate thread while managing potential errors and ensuring that resources are properly cleaned up in case of initialization failures.
-    pending.waitConfirmation().then((itsInitialize) {
-      pendingConnections.remove(pending);
-      if (itsInitialize) {
-        _createChannelFromPending(pending).logIfFails(errorName: 'IsolatedThread -> ObtainSendPort: Initilization failed');
-      }
-    });
+    separateExecution(
+      function: () async {
+        final itsInitialize = await pending.waitConfirmation();
+        pendingConnections.remove(pending);
+        if (itsInitialize) {
+          return await _createChannelFromPending(pending).logIfFails(errorName: 'IsolatedThread -> ObtainSendPort: Initilization failed');
+        } else {
+          return NegativeResult.controller(
+            code: ErrorCode.discontinuedFunctionality,
+            message: const FixedOration(message: 'The pending connection was not confirmed and was discarded'),
+          );
+        }
+      },
+    ).logIfFails(errorName: 'IsolatedThread -> ObtainSendPort: Failed to execute initialization function for pending connection');
 
     return pending.output.asResultValue<SendPort>();
   }
@@ -75,6 +84,86 @@ abstract class IsolatedThread with DisposableMixin, LifecycleHub implements Thre
     }
 
     return threadResult.content.createSendPort();
+  }
+
+  @override
+  Result<void> defineThreadObject<T extends Object>({required String name, required T object, bool removePrevious = true}) {
+    final exists = _threadData[name];
+    if (exists != null) {
+      if (removePrevious) {
+        _threadData.remove(name);
+        if (exists is Disposable) {
+          exists.dispose();
+        }
+      } else {
+        return NegativeResult.controller(
+          code: ErrorCode.invalidFunctionality,
+          message: FlexibleOration(message: 'An object with name %1 is already defined in the thread', textParts: [name]),
+        );
+      }
+    }
+    _threadData[name] = object;
+
+    if (object is Disposable) {
+      object.onDispose.whenComplete(() {
+        if (_threadData[name] == object) {
+          _threadData.remove(name);
+        }
+      });
+    }
+    return voidResult;
+  }
+
+  @override
+  Result<T> obtainThreadObject<T extends Object>({required String name}) {
+    final object = _threadData[name];
+    if (object == null) {
+      return NegativeResult.controller(
+        code: ErrorCode.invalidFunctionality,
+        message: FlexibleOration(message: 'No object with name %1 is defined in the thread', textParts: [name]),
+      );
+    }
+    if (object is! T) {
+      return NegativeResult.controller(
+        code: ErrorCode.invalidFunctionality,
+        message: FlexibleOration(message: 'Object with name %1 is not of type %2 (object is %3)', textParts: [name, T.toString(), object.runtimeType.toString()]),
+      );
+    }
+    return ResultValue(content: object);
+  }
+
+  @override
+  Result<bool> hasThreadObject<T extends Object>({required String name}) {
+    final object = _threadData[name];
+    if (object == null) {
+      return ResultValue(content: false);
+    }
+    if (object is! T) {
+      return NegativeResult.controller(
+        code: ErrorCode.invalidFunctionality,
+        message: FlexibleOration(message: 'Object with name %1 is not of type %2 (object is %3)', textParts: [name, T.toString(), object.runtimeType.toString()]),
+      );
+    }
+    return ResultValue(content: true);
+  }
+
+  @override
+  Result<void> removeThreadObject<T extends Object>({required String name}) {
+    final object = _threadData[name];
+    if (object == null) {
+      return voidResult;
+    }
+    if (object is! T) {
+      return NegativeResult.controller(
+        code: ErrorCode.invalidFunctionality,
+        message: FlexibleOration(message: 'Object with name %1 is not of type %2 (object is %3)', textParts: [name, T.toString(), object.runtimeType.toString()]),
+      );
+    }
+    _threadData.remove(name);
+    if (object is Disposable) {
+      object.dispose();
+    }
+    return voidResult;
   }
 
   @override

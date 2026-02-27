@@ -110,6 +110,10 @@ void main() {
       if (result.itsFailure) {
         fail('Failed to create channel from SecondService: ${result.error}');
       }
+
+       
+
+      await Future.delayed(const Duration(seconds: 30));
     });
   });
 }

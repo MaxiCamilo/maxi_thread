@@ -68,4 +68,19 @@ class ThreadManagerInitializer implements ThreadManager {
   Result<T> getThreadEntity<T>() {
     return _defineThreadSystem().getThreadEntity<T>();
   }
+
+  @override
+  Result<void> defineThreadObject<T extends Object>({required String name, required T object, bool removePrevious = true}) =>
+      _defineThreadSystem().defineThreadObject<T>(name: name, object: object, removePrevious: removePrevious);
+
+  @override
+  Result<T> obtainThreadObject<T extends Object>({required String name}) => _defineThreadSystem().obtainThreadObject<T>(name: name);
+
+  @override
+  Result<bool> hasThreadObject<T extends Object>({required String name}) => _defineThreadSystem().hasThreadObject<T>(name: name);
+
+  @override
+  Result<void> removeThreadObject<T extends Object>({required String name}) {
+    return _defineThreadSystem().removeThreadObject<T>(name: name);
+  }
 }

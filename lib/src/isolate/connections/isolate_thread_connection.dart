@@ -94,7 +94,7 @@ class IsolateThreadConnection with DisposableMixin, LifecycleHub implements Thre
   }
 
   @override
-  FutureResult<Channel<S, R>> buildChannel<R, S>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<Channel<R, S>>> Function(InvocationParameters para) function}) async {
-    return threadSystem.dynamicCastResult<IsolatedThread>().onCorrectFuture((x) => x.channelManager.executeRequest<R, S>(parameters: parameters, function: function, connection: this));
+  FutureResult<Channel<S, R>> buildChannel<R, S>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<dynamic>> Function(Channel<R, S> channel, InvocationParameters para) function}) {
+    return threadSystem.dynamicCastResult<IsolatedThread>().onCorrectFuture((x) => x.channelManager.executeRequest<R, S>(parameters: parameters, connection: this, function: function));
   }
 }

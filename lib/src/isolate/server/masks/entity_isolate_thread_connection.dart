@@ -103,14 +103,17 @@ class EntityIsolateThreadConnection<T> implements EntityThreadConnection<T> {
   }
 
   @override
-  FutureResult<Channel<S, R>> buildChannel<R, S>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<Channel<R, S>>> Function(T serv, InvocationParameters para) function}) async {
+  FutureResult<Channel<S, R>> buildChannel<R, S>({
+    InvocationParameters parameters = InvocationParameters.empty,
+    required FutureOr<Result<void>> Function(T serv, Channel<R, S> channel, InvocationParameters para) function,
+  }) async {
     return connection.buildChannel(
       function: _buildChannelOnThread<T, R, S>,
       parameters: InvocationParameters.addParameters(original: parameters, namedParameters: {_channelFunctionName: function}),
     );
   }
 
-  static FutureResult<Channel<R, S>> _buildChannelOnThread<T, R, S>(InvocationParameters parameters) async {
+  static FutureResult<void> _buildChannelOnThread<T, R, S>(Channel<R, S> channel, InvocationParameters parameters) async {
     final clientConnectionResult = threadSystem.dynamicCastResult<IsolatedThreadClient>(errorMessage: const FixedOration(message: 'The thread connection is not an client, which is required to build entity channels'));
     if (clientConnectionResult.itsFailure) {
       return clientConnectionResult.cast();
@@ -132,13 +135,13 @@ class EntityIsolateThreadConnection<T> implements EntityThreadConnection<T> {
         message: const FixedOration(message: 'The function to execute was not found in the invocation parameters'),
       );
     }
-    if (function is! FutureOr<Result<Channel<R, S>>> Function(T serv, InvocationParameters para)) {
+    if (function is! FutureOr<Result<void>> Function(T serv, Channel<R, S> channel, InvocationParameters para)) {
       return NegativeResult.controller(
         code: ErrorCode.implementationFailure,
         message: const FixedOration(message: 'The function to execute has an invalid type'),
       );
     }
 
-    return await function(entity, parameters);
+    return await function(entity, channel, parameters);
   }
 }

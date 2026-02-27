@@ -12,29 +12,27 @@ class ThirdService {
     return 'Hola Hola desde el tercer hilo, en español obvio'.asResultValue();
   }
 
-  Result<Channel<int, String>> createRandomChannel() {
-    final channel = MasterChannel<String, int>();
-    scheduleMicrotask(() async {
-      await Future.delayed(const Duration(seconds: 10));
-      log('Starting to send data through the channel', name: 'ThirdService');
-      channel
-          .getReceiver()
-          .onCorrectLambda(
-            (x) => x.listen((text) {
-              log('Client sent: $text', name: 'ThirdService');
-            }),
-          )
-          .logIfFails(errorName: 'ThirdService -> createRandomChannel: Failed to listen to channel receiver');
-      channel.sendItem(0);
+  Future<Result<void>> createRandomChannel(Channel<String, int> channel) async {
+    channel.onDispose.whenComplete(() => log('Channel was disposed, stopping channel logic', name: 'ThirdService')).ignore();
+    channel
+        .getReceiver()
+        .onCorrectLambda(
+          (x) => x.listen((text) {
+            log('Client sent: $text', name: 'ThirdService');
+          }),
+        )
+        .logIfFails(errorName: 'ThirdService -> createRandomChannel: Failed to listen to channel receiver');
 
-      for (int i = 1; i <= 10; i++) {
-        await Future.delayed(const Duration(seconds: 1));
-        channel.sendItem(i);
-      }
+    await Future.delayed(const Duration(seconds: 10));
+    log('Starting to send data through the channel', name: 'ThirdService');
+    channel.sendItem(0);
 
-      channel.dispose();
-    });
+    for (int i = 1; i <= 20; i++) {
+      await Future.delayed(const Duration(seconds: 1));
+      channel.sendItem(i);
+    }
 
-    return channel.buildConnector();
+
+    return voidResult;
   }
 }

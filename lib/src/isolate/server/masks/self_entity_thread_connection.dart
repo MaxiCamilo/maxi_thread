@@ -23,20 +23,16 @@ class SelfEntityThreadConnection<T> implements EntityThreadConnection<T> {
   }
 
   @override
-  FutureResult<Channel<S, R>> buildChannel<R, S>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<Channel<R, S>>> Function(T serv, InvocationParameters para) function}) {
-    return executeResult(
-      function: (_, _) async {
-        final channelResult = await function(instance, parameters);
-        if (channelResult.itsFailure) {
-          return channelResult.cast();
-        }
+  FutureResult<Channel<S, R>> buildChannel<R, S>({
+    InvocationParameters parameters = InvocationParameters.empty,
+    required FutureOr<Result<void>> Function(T serv, Channel<R, S> channel, InvocationParameters para) function,
+  }) async {
+    final channel = MasterChannel<R, S>();
 
-        if (channelResult.content is MasterChannel<R, S>) {
-          return (channelResult.content as MasterChannel<R, S>).buildConnector();
-        } else {
-          return MasterChannel.mirror(origin: channelResult.content).asResultValue();
-        }
-      },
-    );
+    executeResult<void>(function: (instance, para) => function(instance, channel, para), parameters: parameters).whenComplete(() => channel.dispose());
+
+    
+
+    return channel.buildConnector();
   }
 }

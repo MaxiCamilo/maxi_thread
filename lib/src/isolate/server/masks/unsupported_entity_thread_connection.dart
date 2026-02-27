@@ -24,7 +24,10 @@ class UnsupportedEntityThreadConnection<T> implements EntityThreadConnection<T> 
   }
 
   @override
-  FutureResult<Channel<S, R>> buildChannel<R, S>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<Channel<R, S>>> Function(T serv, InvocationParameters para) function}) async {
+  FutureResult<Channel<S, R>> buildChannel<R, S>({
+    InvocationParameters parameters = InvocationParameters.empty,
+    required FutureOr<Result<void>> Function(T serv, Channel<R, S> channel, InvocationParameters para) function,
+  }) async {
     return NegativeResult.controller(
       code: ErrorCode.implementationFailure,
       message: FlexibleOration(message: 'The service %1 has not been mounted', textParts: [T.toString()]),

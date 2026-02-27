@@ -46,8 +46,14 @@ class SelfThreadConnection implements ThreadConnection {
   }
 
   @override
-  FutureResult<Channel<S, R>> buildChannel<R, S>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<Channel<R, S>>> Function(InvocationParameters para) function}) async {
-    final newChannelResult = await function(parameters);
-    return newChannelResult.asResultValue();
+  FutureResult<Channel<S, R>> buildChannel<R, S>({
+    InvocationParameters parameters = InvocationParameters.empty,
+    required FutureOr<Result<void>> Function(Channel<R, S> channel, InvocationParameters para) function,
+  }) async {
+    final channel = MasterChannel<R, S>();
+
+    executeResult<void>(function: (para) => function(channel, para), parameters: parameters).whenComplete(() => channel.dispose());
+
+    return channel.buildConnector();
   }
 }

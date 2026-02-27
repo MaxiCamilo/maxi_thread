@@ -20,5 +20,10 @@ abstract interface class ThreadManager implements Disposable {
 
   Result<T> getThreadEntity<T>();
 
+  Result<T> obtainThreadObject<T extends Object>({required String name});
+  Result<void> defineThreadObject<T extends Object>({required String name, required T object, bool removePrevious = true});
+  Result<bool> hasThreadObject<T extends Object>({required String name});
+  Result<void> removeThreadObject<T extends Object>({required String name});
+
   static ThreadManager get threadZone => Zone.current[kThreadManagerZone]! as ThreadManager;
 }

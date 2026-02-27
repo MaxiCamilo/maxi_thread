@@ -6,15 +6,19 @@ import 'package:maxi_thread/src/isolate/communication/isolator_channel.dart';
 import 'package:maxi_thread/src/isolate/connections/isolate_message.dart';
 import 'package:rxdart/rxdart.dart';
 
-/// Represents a sender for executing tasks in an isolate thread through an isolator channel. The `IsolateTaskSender` class manages the sending of task requests, handling of confirmations, and reception of results or messages from the isolate thread. It provides methods for executing functions that return results or results wrapped in a `Result` type, allowing for structured communication and error handling between threads in an isolated environment. The class also manages the lifecycle of tasks and ensures proper disposal of resources when the sender is discarded.
+/// Manages task execution in an isolate thread by handling communication between the main thread and the isolate,
+/// sending task requests, receiving confirmations and results, and managing the lifecycle of active tasks.
+/// It ensures synchronized communication and proper resource cleanup through task instance management.
 class IsolateTaskSender with DisposableMixin {
   /// The [channel] through which the sender communicates with the isolate thread, sending task requests and receiving confirmations, results, or messages.
   final IsolatorChannel channel;
+
   /// The name of the thread in which the sender is operating, used for logging and identification purposes.
   final String threadName;
 
   /// A mutex used to synchronize the sending of task requests and the handling of confirmations, ensuring that only one request is sent at a time and that confirmations are properly matched to their corresponding requests.
   final _confirmationMutex = Mutex();
+
   /// A list that keeps track of the currently active tasks, allowing the sender to manage their lifecycle and ensure proper disposal when necessary. Each task is represented by an instance of the `_IsolateTaskInstance` class, which encapsulates the details and state of an individual task being executed in the isolate thread.
   final _tasks = <_IsolateTaskInstance>[];
 
@@ -102,17 +106,22 @@ class IsolateTaskSender with DisposableMixin {
   _IsolateTaskInstance<T> _createTaskInstance<T>({required int id}) {
     final task = _IsolateTaskInstance<T>(id: id);
     _tasks.add(task);
-    task.onDispose.whenComplete(() => _tasks.remove(task));
+    task.onDispose.whenComplete(() {
+      if (!task.isCompleted) {
+        log('mmmmm');
+      }
+      _tasks.remove(task);
+    });
 
     final heart = LifeCoordinator.tryGetZoneHeart;
 
-    if (heart != null) {
-      final onHeartDispose = heart.onDispose.whenComplete(() {
-        if (task.itWasDiscarded) return;
+    if (heart != null && !heart.itWasDiscarded) {
+      heart.joinDisposableObject(task, () {
+        if (task.itWasDiscarded) {
+          return;
+        }
         channel.send(IsolateMessageRequest(type: IsolateMessageRequestType.cancel, id: id, payload: null));
-        task.dispose();
       });
-      task.onDispose.whenComplete(() => onHeartDispose.ignore());
     }
 
     return task;
@@ -158,6 +167,8 @@ class _IsolateTaskInstance<T> with DisposableMixin {
 
   final _completer = Completer<Result<T>>();
   late final List<Function> _interactiveFunctions;
+
+  bool get isCompleted => _completer.isCompleted;
 
   _IsolateTaskInstance({required this.id}) {
     _interactiveFunctions = InteractiveSystem.getAllSenders();

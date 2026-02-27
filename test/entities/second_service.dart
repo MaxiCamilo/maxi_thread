@@ -24,7 +24,7 @@ class SecondService {
   FutureResult<void> createChannel() {
     return threadSystem
         .service<ThirdService>()
-        .buildChannel(function: (serv, para) => serv.createRandomChannel())
+        .buildChannel<String, int>(function: (serv, channel, para) => serv.createRandomChannel(channel))
         .injectLogic(
           (x) => x.getReceiver().onCorrectLambda(
             (y) => y.listen((data) {
@@ -32,6 +32,35 @@ class SecondService {
             }),
           ),
         )
-        .onCorrectFutureVoid((x) async => await x.onDispose);
+        .injectLogic((channel) {
+          Future.delayed(const Duration(seconds: 5)).whenComplete(() {
+            channel.sendItem('Hello from SecondService through the channel!');
+          });
+
+          Future.delayed(const Duration(seconds: 21)).whenComplete(() {
+            channel.sendItem('Hello again from SecondService through the channel!');
+          });
+          /*
+          Future.delayed(const Duration(seconds: 30)).whenComplete(() {
+            channel.sendItem('I am going to destroy you hahaha!');
+            channel.dispose();
+          });*/
+
+          return voidResult;
+        })
+        .onCorrectFutureVoid((x) async => await x.onDispose)
+        .onCorrectFutureVoid((_) => log('Channel was disposed', name: 'SecondService'))
+        .onCorrectFutureVoid((x) => Future.delayed(const Duration(seconds: 5)).whenComplete(() => log('Finished waiting after channel disposal', name: 'SecondService')))
+        .onCorrectFutureVoid((_) async {
+          await threadSystem
+              .service<ThirdService>()
+              .executeResult(
+                function: (serv, para) {
+                  return serv.sayHi();
+                },
+              )
+              .logIfFails(errorName: 'Failed to execute sayHi in ThirdService after channel disposal')
+              .onCorrectFutureVoid((x) => log('Successfully executed sayHi in ThirdService after channel disposal, result: $x', name: 'SecondService'));
+        });
   }
 }
