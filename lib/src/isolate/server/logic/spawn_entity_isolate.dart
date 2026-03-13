@@ -27,7 +27,7 @@ class SpawnEntityIsolate<T> with FunctionalityMixin<EntityIsolateThreadConnectio
 
   @override
   /// Executes the functionality of spawning a new isolate thread and initializing it with the provided entity object. This method creates a new thread using the isolated thread server, initializes the entity within the thread, and returns a result containing the connection to the newly spawned isolate thread. If any step in the process fails, it handles the failure appropriately and ensures that resources are cleaned up.
-  Future<Result<EntityIsolateThreadConnection<T>>> runFuncionality() async {
+  Future<Result<EntityIsolateThreadConnection<T>>> runInternalFuncionality() async {
     final newConnectionResult = await server.createThread(name: entityObject.runtimeType.toString(), initializers: const []);
     if (newConnectionResult.itsFailure) {
       return newConnectionResult.cast();

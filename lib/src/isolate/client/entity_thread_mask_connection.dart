@@ -12,7 +12,7 @@ import 'package:meta/meta.dart';
 
 /// Represents a connection to an entity thread in an isolated environment, allowing communication and interaction with the entity managed by the thread. This class serves as a mask connection that abstracts the underlying communication details and provides a convenient interface for executing functions on the entity thread.
 /// The `EntityThreadMaskConnection` class implements the `EntityThreadConnection` interface and utilizes an underlying `EntityIsolateThreadConnection` to perform the actual communication with the entity thread.
-class EntityThreadMaskConnection<T> with AsynchronouslyInitializedMixin implements EntityThreadConnection<T> {
+class EntityThreadMaskConnection<T> with DisposableMixin, AsynchronouslyInitializedMixin implements EntityThreadConnection<T> {
   final ThreadConnection serverConnection;
   final IsolatedThreadClient clientConnection;
 

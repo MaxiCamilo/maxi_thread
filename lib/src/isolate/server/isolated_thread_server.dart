@@ -4,6 +4,7 @@ import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/src/entity_thread_connection.dart';
 import 'package:maxi_thread/src/isolate/client/isolated_thread_client.dart';
 import 'package:maxi_thread/src/isolate/isolated_thread.dart';
+import 'package:maxi_thread/src/isolate/server/logic/define_exception_channel.dart';
 import 'package:maxi_thread/src/isolate/server/logic/initialize_isolate_thread.dart';
 import 'package:maxi_thread/src/isolate/server/logic/spawn_entity_isolate.dart';
 import 'package:maxi_thread/src/isolate/server/logic/spawn_isolate.dart';
@@ -21,9 +22,10 @@ class IsolatedThreadServer extends IsolatedThread {
   String get name => 'Isolated Thread Server';
 
   final _spawnMutex = Mutex();
-  final _entityMutex = Mutex();
 
   int _lastIdentifier = 1;
+
+  final Map<Type, Mutex> _entityCreationMutexes = {};
 
   @override
   ThreadConnection get serverConnection => SelfThreadConnection(this);
@@ -61,7 +63,7 @@ class IsolatedThreadServer extends IsolatedThread {
     }
 
     final initializationResult = await connection.executeResult(
-      parameters: InvocationParameters.only(InitializeIsolateThread(initializers: initializers)),
+      parameters: InvocationParameters.only(InitializeIsolateThread(initializers: [const DefineExceptionChannel(), ...initializers])),
       function: InitializeIsolateThread.runInThread,
     );
     if (initializationResult.itsFailure) {
@@ -79,25 +81,49 @@ class IsolatedThreadServer extends IsolatedThread {
     final replicant = parameters.first<Functionality<ApplicationManager>>();
     final appManagerResult = await replicant.execute();
     if (appManagerResult.itsFailure) return appManagerResult.cast();
-    defineAppManager(appManagerResult.content);
+
+    final newAppManager = appManagerResult.content;
+    if (newAppManager is AsynchronouslyInitialized) {
+      final initResult = await (newAppManager as AsynchronouslyInitialized).initialize();
+      if (initResult.itsFailure) {
+        return initResult.cast();
+      }
+    }
+
+    if (newAppManager is SyncFunctionality) {
+      final initResult = (newAppManager as SyncFunctionality).execute();
+      if (initResult.itsFailure) {
+        return initResult.cast();
+      }
+    }
+
+    defineAppManager(newAppManager);
+
     return voidResult;
   }
 
   @override
-  FutureResult<EntityThreadConnection<T>> createEntityThread<T>({required T instance, bool omitIfExists = true}) {
-    return _entityMutex.execute(() async {
-      final existingConnection = entityConnections[T];
-      if (existingConnection != null) {
-        if (omitIfExists) {
-          return existingConnection.asResultValue();
-        } else {
-          return NegativeResult.controller(
-            code: ErrorCode.invalidFunctionality,
-            message: FlexibleOration(message: 'An entity thread connection for type %1 already exists', textParts: [T.toString()]),
-          );
-        }
-      }
+  FutureResult<EntityThreadConnection<T>> createEntityThread<T>({required T instance, bool omitIfExists = true}) async {
+    final initializing = _entityCreationMutexes[T];
+    if (initializing != null) {
+      await initializing.execute(() async {});
+    }
 
+    final existingConnection = entityConnections[T];
+    if (existingConnection != null) {
+      if (omitIfExists) {
+        return existingConnection.asResultValue();
+      } else {
+        return NegativeResult.controller(
+          code: ErrorCode.invalidFunctionality,
+          message: FlexibleOration(message: 'An entity thread connection for type %1 already exists', textParts: [T.toString()]),
+        );
+      }
+    }
+
+    final reserver = Mutex();
+    _entityCreationMutexes[T] = reserver;
+    final result = await reserver.execute<Result<EntityThreadConnection<T>>>(() async {
       final newThreadResult = await SpawnEntityIsolate<T>(entityObject: instance, server: this).execute();
       if (newThreadResult.itsFailure) {
         return newThreadResult.cast();
@@ -105,9 +131,12 @@ class IsolatedThreadServer extends IsolatedThread {
 
       entityConnections[T] = newThreadResult.content;
       newThreadResult.content.connection.onDispose.whenComplete(() => entityConnections.remove(T));
-
       return newThreadResult;
     });
+
+    _entityCreationMutexes.remove(T);
+
+    return result;
   }
 
   @override
@@ -188,6 +217,4 @@ class IsolatedThreadServer extends IsolatedThread {
       message: const FixedOration(message: 'Cannot get thread entity: only isolate thread client can process this request'),
     );
   }
-  
-  
 }

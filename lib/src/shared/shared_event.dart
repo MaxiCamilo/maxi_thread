@@ -1,7 +1,7 @@
 import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/src/shared/shared_service.dart';
 
-class SharedEvent<T> with AsynchronouslyInitializedMixin implements Channel<T, T> {
+class SharedEvent<T> with DisposableMixin, AsynchronouslyInitializedMixin implements Channel<T, T> {
   final String name;
 
   late Channel<T, T> _channel;
@@ -50,6 +50,13 @@ class SharedEvent<T> with AsynchronouslyInitializedMixin implements Channel<T, T
     }
 
     initialize().onCorrectFuture((_) => sendItem(item)).logIfFails(errorName: 'SharedEvent.sendItem -> Failed to initialize SharedEvent before sending item');
+    return voidResult;
+  }
+
+  FutureResult<void> shutdownEvent() async {
+    final finishResult = await SharedService.connection().onCorrectFuture((x) => x.execute(parameters: InvocationParameters.only(name), function: (serv, para) => serv.eventManager.finishEvent(para.first<String>())));
+    if (finishResult.itsFailure) return finishResult.cast();
+    dispose();
     return voidResult;
   }
 }

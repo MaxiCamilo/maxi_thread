@@ -27,6 +27,19 @@ class SharedEventsManager with DisposableMixin {
     return voidResult;
   }
 
+  void finishEvent(String eventName) {
+    if (itWasDiscarded) return;
+
+    final list = _eventsMap[eventName];
+    if (list == null) return;
+
+    for (final channel in list) {
+      channel.dispose();
+    }
+
+    _eventsMap.remove(eventName);
+  }
+
   void _sendResult<T>(String eventName, Channel<T, T> originChannel, T item) {
     if (itWasDiscarded) return;
 
