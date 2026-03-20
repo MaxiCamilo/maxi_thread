@@ -1,8 +1,7 @@
 import 'dart:async';
 
 import 'package:maxi_framework/maxi_framework.dart';
-import 'package:maxi_thread/src/entity_thread_connection.dart';
-import 'package:maxi_thread/src/thread_connection.dart';
+import 'package:maxi_thread/maxi_thread.dart';
 
 /// Signature that defines the operator of a specific thread. Thread operators are unique in the contexts of isolated zones (whether a native thread or a separated part). They are usually found in [threadSystem] in [thread_singleton.dart].
 abstract interface class ThreadManager implements Disposable {
@@ -11,6 +10,7 @@ abstract interface class ThreadManager implements Disposable {
   int get identifier;
   String get name;
   ThreadConnection get serverConnection;
+  BackgroundThreadService get backgroundService;
 
   EntityThreadConnection<T> service<T>();
 

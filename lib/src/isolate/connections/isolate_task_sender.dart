@@ -220,6 +220,7 @@ class _IsolateTaskInstance<T> with DisposableMixin {
   /// Disposes of the task instance by completing the completer with a cancellation result if it has not already been completed. This ensures that any waiting operations for the task's result are properly notified of the cancellation, allowing for effective cleanup and resource management when the task is discarded.
   void performObjectDiscard() {
     if (!_completer.isCompleted) {
+      
       _completer.complete(CancelationResult<T>());
     }
   }

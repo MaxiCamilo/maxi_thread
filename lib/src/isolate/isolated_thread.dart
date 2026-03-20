@@ -38,8 +38,8 @@ abstract class IsolatedThread with DisposableMixin, LifecycleHub implements Thre
 
     pendingConnections.add(pending);
 
-    separateExecution(
-      function: () async {
+    LifeCoordinator.runWithSeparateZone(
+       () async {
         final itsInitialize = await pending.waitConfirmation();
         pendingConnections.remove(pending);
         if (itsInitialize) {

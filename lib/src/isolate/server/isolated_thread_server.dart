@@ -10,6 +10,7 @@ import 'package:maxi_thread/src/isolate/server/logic/spawn_entity_isolate.dart';
 import 'package:maxi_thread/src/isolate/server/logic/spawn_isolate.dart';
 import 'package:maxi_thread/src/isolate/server/masks/self_thread_connection.dart';
 import 'package:maxi_thread/src/isolate/server/masks/unsupported_entity_thread_connection.dart';
+import 'package:maxi_thread/src/isolate/server/modules/background_isolate_server.dart';
 import 'package:maxi_thread/src/thread_connection.dart';
 import 'package:maxi_thread/src/thread_singleton.dart';
 
@@ -25,10 +26,17 @@ class IsolatedThreadServer extends IsolatedThread {
 
   int _lastIdentifier = 1;
 
+  @override
+  late final BackgroundIsolateServer backgroundService;
+
   final Map<Type, Mutex> _entityCreationMutexes = {};
 
   @override
   ThreadConnection get serverConnection => SelfThreadConnection(this);
+
+  IsolatedThreadServer() {
+    backgroundService = BackgroundIsolateServer(server: this);
+  }
 
   @override
   FutureResult<ThreadConnection> createThread({required String name, List<Functionality> initializers = const []}) async {

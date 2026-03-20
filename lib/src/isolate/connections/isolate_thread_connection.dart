@@ -34,7 +34,9 @@ class IsolateThreadConnection with DisposableMixin, LifecycleHub implements Thre
   /// Obtains the thread data, including the identifier and name, by executing a function in the isolate thread. If the connection has been discarded, it returns a cancellation result. If there is an error during execution, it returns the error wrapped in a `Result` type. If the data is obtained successfully, it updates the `identifier` and `name` properties of the connection and returns a void result. This method allows for effective retrieval of thread information while handling potential errors and ensuring that operations are not performed on a discarded connection.
   FutureResult<void> obtaintThreadData() async {
     if (itWasDiscarded) {
-      return CancelationResult();
+      final cancel = CancelationResult();
+      appManager.exceptionChannel.sendItem((cancel, StackTrace.current));
+      return cancel;
     }
 
     final data = await execute(function: _sendData);

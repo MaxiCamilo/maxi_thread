@@ -2,6 +2,7 @@ import 'dart:isolate';
 
 import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/src/entity_thread_connection.dart';
+import 'package:maxi_thread/src/isolate/client/background_isolate_client.dart';
 import 'package:maxi_thread/src/isolate/communication/isolator_channel_end_point.dart';
 import 'package:maxi_thread/src/isolate/client/entity_thread_mask_connection.dart';
 import 'package:maxi_thread/src/isolate/connections/isolate_thread_connection.dart';
@@ -24,6 +25,9 @@ class IsolatedThreadClient extends IsolatedThread {
   @override
   late final ThreadConnection serverConnection;
 
+  @override
+  late final BackgroundIsolateClient backgroundService;
+
   dynamic entity;
 
   /// Creates an isolated thread client with the given [identifier] and [name], and establishes a connection with the server using the provided [channel].
@@ -31,6 +35,7 @@ class IsolatedThreadClient extends IsolatedThread {
     final server = IsolateThreadConnection(channel: channel, identifier: 0, name: 'Isolated Thread Server');
     externalConnections.add(server);
     serverConnection = server;
+    backgroundService = BackgroundIsolateClient(serverConnection: serverConnection);
     serverConnection.onDispose.whenComplete(dispose);
   }
 

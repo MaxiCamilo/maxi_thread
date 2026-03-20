@@ -1,5 +1,6 @@
 import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/src/shared/shared_service.dart';
+import 'package:rxdart/rxdart.dart';
 
 class SharedValue<T extends Object> {
   final String name;
@@ -43,5 +44,22 @@ class SharedValue<T extends Object> {
         function: (serv, para) => serv.removeSharedObject(name: para.first<String>()),
       ),
     );
+  }
+
+  Stream<T> observerValue() async* {
+    if (await hasInstance()) {
+      yield await getValue().waitContentOrThrow();
+    }
+
+    final channel = await SharedService.connection()
+        .onCorrectFuture(
+          (x) => x.buildChannel<dynamic, T>(
+            parameters: InvocationParameters.only(name),
+            function: (serv, channel, para) => serv.observerChannel<T>(name: para.first<String>(), channel: channel),
+          ),
+        )
+        .waitContentOrThrow();
+
+    yield* channel.getReceiver().content.doOnCancel(() => channel.dispose());
   }
 }

@@ -1,12 +1,16 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/maxi_thread.dart';
 import 'package:maxi_thread/src/shared/shared_events_manager.dart';
+import 'package:rxdart/rxdart.dart';
 
 class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
   late Map<String, Object> _sharedObjectMap;
   late SharedEventsManager eventManager;
+
+  late StreamController<(String, Object)> _objectChangeController;
 
   static FutureResult<EntityThreadConnection<SharedService>> connection() {
     return threadSystem.createEntityThread<SharedService>(instance: SharedService(), omitIfExists: true);
@@ -16,6 +20,7 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
   Result<void> performInitialization() {
     _sharedObjectMap = <String, Object>{};
     eventManager = joinDisposableObject(SharedEventsManager());
+    _objectChangeController = joinStreamController(StreamController<(String, Object)>.broadcast());
     return voidResult;
   }
 
@@ -90,7 +95,25 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
     }
 
     _sharedObjectMap[name] = item;
+    _objectChangeController.add((name, item));
 
+    return voidResult;
+  }
+
+  FutureResult<void> observerChannel<T>({required String name, required Channel<dynamic, T> channel}) async {
+    final stream = _objectChangeController.stream.where((change) => change.$1 == name).map((change) => change.$2).whereType<T>();
+    final subscription = stream.listen(
+      (item) {
+        channel.sendItem(item);
+      },
+      onError: (x, y) {
+        log('Error in shared service observer channel for object $name: $x, stackTrace: $y', name: 'SharedService.observerChannel');
+      },
+      onDone: () => channel.dispose(),
+    );
+
+    await channel.onDispose;
+    subscription.cancel();
     return voidResult;
   }
 }

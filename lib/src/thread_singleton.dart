@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:maxi_framework/maxi_framework.dart';
+import 'package:maxi_thread/src/background_thread_service.dart';
 import 'package:maxi_thread/src/entity_thread_connection.dart';
 import 'package:maxi_thread/src/thread_connection.dart';
 import 'package:maxi_thread/src/thread_manager.dart';
@@ -83,4 +84,7 @@ class ThreadManagerInitializer implements ThreadManager {
   Result<void> removeThreadObject<T extends Object>({required String name}) {
     return _defineThreadSystem().removeThreadObject<T>(name: name);
   }
+
+  @override
+  BackgroundThreadService get backgroundService => _defineThreadSystem().backgroundService;
 }

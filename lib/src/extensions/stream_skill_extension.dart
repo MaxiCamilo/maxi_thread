@@ -7,7 +7,7 @@ import 'package:rxdart/rxdart.dart';
 
 extension StreamSkillConnectionExtension on ThreadConnection {
   static const _kStreamFuncNameInParameters = '%+*[Mx.sTReAm]?&&¿';
-  static const _kStreamEntFuncNameInParameters = '%+*[Mx.sTReAm.E]?&&¿';
+  //static const _kStreamEntFuncNameInParameters = '%+*[Mx.sTReAm.E]?&&¿';
 
   FutureResult<Stream<T>> buildStream<T>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<Stream<T>>> Function(InvocationParameters para) function}) async {
     final newChannelResult = await buildChannel<dynamic, T>(
@@ -87,15 +87,17 @@ extension StreamSkillConnectionExtension on ThreadConnection {
     return voidResult;
   }
 }
-
+/*
 extension StreamSkillEntityConnectionExtension<T> on EntityThreadConnection<T> {
-  FutureResult<Stream<R>> buildStream<R>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<Stream<R>>> Function(T item, InvocationParameters para) function}) async {
+  FutureResult<Stream<R>> buildStream<R>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<Stream<R>>> Function(T item, InvocationParameters para) function}) async* {
     final newChannelResult = await buildChannel<dynamic, R>(
       parameters: InvocationParameters.addParameters(namedParameters: {StreamSkillConnectionExtension._kStreamEntFuncNameInParameters: function}, original: parameters),
       function: _buildSteamEntOnThread<T, dynamic, R>,
     );
 
-    if (newChannelResult.itsFailure) return newChannelResult.cast();
+    if (newChannelResult.itsFailure) {
+      throw newChannelResult.cast();
+    }
 
     final channel = newChannelResult.content;
     final streamController = StreamController<R>();
@@ -117,10 +119,10 @@ extension StreamSkillEntityConnectionExtension<T> on EntityThreadConnection<T> {
 
     if (streamResult.itsFailure) {
       channel.dispose();
-      return streamResult.cast();
+      throw streamResult.cast();
     }
 
-    return streamController.stream.doOnCancel(() => channel.dispose()).asResultValue();
+    yield* streamController.stream.doOnCancel(() => channel.dispose());
   }
 
   static FutureResult<void> _buildSteamEntOnThread<T, Y, R>(T item, Channel<dynamic, R> channel, InvocationParameters para) async {
@@ -166,4 +168,4 @@ extension StreamSkillEntityConnectionExtension<T> on EntityThreadConnection<T> {
 
     return voidResult;
   }
-}
+}*/
