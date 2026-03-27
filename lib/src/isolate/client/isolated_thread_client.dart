@@ -118,7 +118,7 @@ class IsolatedThreadClient extends IsolatedThread {
       return initResult.cast();
     }
 
-    externalConnections.add(joinDisposableObject(connection));
+    externalConnections.add(lifecycleScope.joinDisposableObject(connection));
     connection.onDispose.whenComplete(() => externalConnections.remove(connection));
     return connection.asResultValue();
   }

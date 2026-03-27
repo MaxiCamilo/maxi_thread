@@ -14,9 +14,9 @@ class IsolateOriginChannel<R, S> with DisposableMixin, LifecycleHub implements C
   late final AsyncExecutor _executor;
 
   IsolateOriginChannel({required this.channelId, required this.origin, required this.function, required this.parameters}) {
-    createDependency(origin).exceptionIfFails(detail: 'Failed to create dependency for IsolateOriginChannel');
-    _streamController = joinStreamController(StreamController<R>.broadcast());
-    _executor = joinDisposableObject(AsyncExecutor<void>(function: _executeFunction));
+    lifecycleScope.createDependency(origin).exceptionIfFails(detail: 'Failed to create dependency for IsolateOriginChannel');
+    _streamController = lifecycleScope.joinStreamController(StreamController<R>.broadcast());
+    _executor = lifecycleScope.joinDisposableObject(AsyncExecutor<void>(function: _executeFunction));
     _executor.waitResult().onNegativeFuture(_sendFinishError).whenComplete(() => dispose());
   }
 
@@ -104,7 +104,6 @@ class IsolateOriginChannel<R, S> with DisposableMixin, LifecycleHub implements C
 
   @override
   void performObjectDiscard() {
-    super.performObjectDiscard();
 
     origin.executeResult(parameters: InvocationParameters.only(channelId), function: _declareFinished);
   }

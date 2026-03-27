@@ -48,7 +48,7 @@ class IsolateTaskProcessor with DisposableMixin, LifecycleHub {
     }
 
     final task = AsyncExecutor(function: () => function(id));
-    joinDisposableObject(task);
+    lifecycleScope.joinDisposableObject(task);
 
     task.createListenerStream().listen(
       (x) {
@@ -122,6 +122,5 @@ class IsolateTaskProcessor with DisposableMixin, LifecycleHub {
 
   @override
   void performObjectDiscard() {
-    super.performObjectDiscard();
   }
 }

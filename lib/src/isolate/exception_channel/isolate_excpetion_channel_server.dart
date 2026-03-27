@@ -13,8 +13,8 @@ class IsolateExcpetionChannelServer with DisposableMixin, LifecycleHub implement
   final _clientsMap = <int, Channel<(dynamic, StackTrace), (dynamic, StackTrace)>>{};
 
   IsolateExcpetionChannelServer({required this.threadServer}) {
-    _serverChannel = joinStreamController(StreamController<(dynamic, StackTrace)>.broadcast());
-    _clientsChannel = joinDisposableObject(MasterChannel<(dynamic, StackTrace), (dynamic, StackTrace)>());
+    _serverChannel = lifecycleScope.joinStreamController(StreamController<(dynamic, StackTrace)>.broadcast());
+    _clientsChannel = lifecycleScope.joinDisposableObject(MasterChannel<(dynamic, StackTrace), (dynamic, StackTrace)>());
   }
 
   @override
@@ -68,5 +68,9 @@ class IsolateExcpetionChannelServer with DisposableMixin, LifecycleHub implement
       );
       return voidResult;
     });
+  }
+  
+  @override
+  void performObjectDiscard() {
   }
 }

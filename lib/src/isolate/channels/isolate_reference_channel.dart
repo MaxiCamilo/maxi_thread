@@ -10,8 +10,8 @@ class IsolateReferenceChannel<R, S> with DisposableMixin, LifecycleHub implement
   late final StreamController<R> _streamController;
 
   IsolateReferenceChannel({required this.channelId, required this.origin}) {
-    createDependency(origin).exceptionIfFails(detail: 'Failed to create dependency for IsolateReferenceChannel');
-    _streamController = joinStreamController(StreamController<R>.broadcast());
+    lifecycleScope.createDependency(origin).exceptionIfFails(detail: 'Failed to create dependency for IsolateReferenceChannel');
+    _streamController = lifecycleScope.joinStreamController(StreamController<R>.broadcast());
   }
 
   @override
@@ -72,7 +72,6 @@ class IsolateReferenceChannel<R, S> with DisposableMixin, LifecycleHub implement
 
   @override
   void performObjectDiscard() {
-    super.performObjectDiscard();
 
     origin.executeResult(parameters: InvocationParameters.only(channelId), function: _declareFinished);
   }

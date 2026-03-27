@@ -212,7 +212,6 @@ class IsolatedThreadServer extends IsolatedThread {
   @override
   void performObjectDiscard() {
     super.performObjectDiscard();
-
     if (threadSystem == this) {
       threadSystem = const ThreadManagerInitializer();
     }

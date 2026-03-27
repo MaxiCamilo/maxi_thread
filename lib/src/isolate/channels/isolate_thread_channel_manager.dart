@@ -28,7 +28,7 @@ class IsolateThreadChannelManager with DisposableMixin, LifecycleHub {
     if (externalResult.itsFailure) return externalResult.cast();
 
     final channelId = externalResult.content;
-    final newChannel = joinDisposableObject(IsolateReferenceChannel<S, R>(channelId: channelId, origin: connection));
+    final newChannel = lifecycleScope.joinDisposableObject(IsolateReferenceChannel<S, R>(channelId: channelId, origin: connection));
     _referenceChannels.add(newChannel);
     newChannel.onDispose.whenComplete(() => _referenceChannels.remove(newChannel));
 
@@ -48,7 +48,7 @@ class IsolateThreadChannelManager with DisposableMixin, LifecycleHub {
     final connection = ThreadConnection.threadZone;
     final id = _lastID;
     _lastID += 1;
-    final channel = joinDisposableObject(IsolateOriginChannel<R, S>(channelId: id, origin: connection, function: parameterResult.content, parameters: parameters));
+    final channel = lifecycleScope.joinDisposableObject(IsolateOriginChannel<R, S>(channelId: id, origin: connection, function: parameterResult.content, parameters: parameters));
     _localChannels.add(channel);
     channel.onDispose.whenComplete(() => _localChannels.remove(channel));
 
@@ -95,5 +95,9 @@ class IsolateThreadChannelManager with DisposableMixin, LifecycleHub {
     }
 
     return ResultValue(content: channel);
+  }
+  
+  @override
+  void performObjectDiscard() {
   }
 }

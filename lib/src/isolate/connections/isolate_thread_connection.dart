@@ -89,7 +89,6 @@ class IsolateThreadConnection with DisposableMixin, LifecycleHub implements Thre
   @override
   /// Disposes of the connection by disposing of the channel, task sender, and task processor. This ensures that all resources associated with the connection are properly cleaned up when the connection is discarded, preventing memory leaks and ensuring that ongoing tasks are appropriately terminated in response to the disposal of the connection.
   void performObjectDiscard() {
-    super.performObjectDiscard();
     channel.dispose();
     taskSender.dispose();
     taskProcessor.dispose();

@@ -20,7 +20,7 @@ class IsolateExceptionChannelClient with DisposableMixin, AsynchronouslyInitiali
     }
 
     _serverChannel = newChannelResult.content;
-    _streamController = joinStreamController(StreamController<(dynamic, StackTrace)>.broadcast());
+    _streamController = lifecycleScope.joinStreamController(StreamController<(dynamic, StackTrace)>.broadcast());
 
     final receiverResult = _serverChannel.getReceiver();
     if(receiverResult.itsFailure){

@@ -19,8 +19,8 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
   @override
   Result<void> performInitialization() {
     _sharedObjectMap = <String, Object>{};
-    eventManager = joinDisposableObject(SharedEventsManager());
-    _objectChangeController = joinStreamController(StreamController<(String, Object)>.broadcast());
+    eventManager = lifecycleScope.joinDisposableObject(SharedEventsManager());
+    _objectChangeController = lifecycleScope.joinStreamController(StreamController<(String, Object)>.broadcast());
     return voidResult;
   }
 
@@ -115,5 +115,9 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
     await channel.onDispose;
     subscription.cancel();
     return voidResult;
+  }
+  
+  @override
+  void performObjectDiscard() {
   }
 }

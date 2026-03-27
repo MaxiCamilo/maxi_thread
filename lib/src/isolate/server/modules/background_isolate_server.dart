@@ -25,7 +25,7 @@ class BackgroundIsolateServer implements BackgroundThreadService {
 
       if (server.externalConnections.length >= _maximumThreads) {
         _threadWaiter ??= Completer<ThreadConnection>();
-        final waitResult = await LifeCoordinator.zoneHeart.waitCompleter(_threadWaiter!);
+        final waitResult = await LifeCoordinator.zoneHeart.lifecycleScope.waitCompleter(_threadWaiter!);
         _threadWaiter = null;
         return waitResult.asResultValue();
       }

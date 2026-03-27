@@ -34,31 +34,29 @@ abstract class IsolatedThread with DisposableMixin, LifecycleHub implements Thre
         message: const FixedOration(message: 'Isolated Thread was discarded'),
       );
     }
-    final pending = joinDisposableObject(IsolatorChannelInitiationPoint());
+    final pending = lifecycleScope.joinDisposableObject(IsolatorChannelInitiationPoint());
 
     pendingConnections.add(pending);
 
-    LifeCoordinator.runWithSeparateZone(
-       () async {
-        final itsInitialize = await pending.waitConfirmation();
-        pendingConnections.remove(pending);
-        if (itsInitialize) {
-          return await _createChannelFromPending(pending).logIfFails(errorName: 'IsolatedThread -> ObtainSendPort: Initilization failed');
-        } else {
-          return NegativeResult.controller(
-            code: ErrorCode.discontinuedFunctionality,
-            message: const FixedOration(message: 'The pending connection was not confirmed and was discarded'),
-          );
-        }
-      },
-    ).logIfFails(errorName: 'IsolatedThread -> ObtainSendPort: Failed to execute initialization function for pending connection');
+    LifeCoordinator.runWithSeparateZone(() async {
+      final itsInitialize = await pending.waitConfirmation();
+      pendingConnections.remove(pending);
+      if (itsInitialize) {
+        return await _createChannelFromPending(pending).logIfFails(errorName: 'IsolatedThread -> ObtainSendPort: Initilization failed');
+      } else {
+        return NegativeResult.controller(
+          code: ErrorCode.discontinuedFunctionality,
+          message: const FixedOration(message: 'The pending connection was not confirmed and was discarded'),
+        );
+      }
+    }).logIfFails(errorName: 'IsolatedThread -> ObtainSendPort: Failed to execute initialization function for pending connection');
 
     return pending.output.asResultValue<SendPort>();
   }
 
   /// A private method that creates a channel from a pending initiation point and adds the new connection to the set of external connections. This method is called once the initialization of the pending connection is confirmed, allowing for effective management of communication channels with the isolate thread while ensuring that resources are properly cleaned up in case of initialization failures. If the initialization is successful, it creates a new `IsolateThreadConnection` using the provided initiation point, obtains the thread data, and adds the new connection to the set of external connections. If there is an error during the initialization process, it disposes of the new connection and returns the error wrapped in a `Result` type, allowing for effective error handling and resource management in the context of managing communication channels with the isolate thread.
   FutureResult<void> _createChannelFromPending(IsolatorChannelInitiationPoint pending) async {
-    final newConnection = joinDisposableObject(IsolateThreadConnection(channel: pending));
+    final newConnection = lifecycleScope.joinDisposableObject(IsolateThreadConnection(channel: pending));
     final dataResult = await newConnection.obtaintThreadData();
     if (dataResult.itsFailure) {
       newConnection.dispose();
@@ -166,11 +164,10 @@ abstract class IsolatedThread with DisposableMixin, LifecycleHub implements Thre
     return voidResult;
   }
 
+  @protected
+  @mustCallSuper
   @override
-  /// Disposes of the thread by clearing all external connections, pending connections, and entity connections. This ensures that all resources associated with the thread are properly cleaned up when the thread is discarded, preventing memory leaks and ensuring that ongoing tasks are appropriately terminated in response to the disposal of the thread.
-  void dispose() {
-    super.dispose();
-
+  void performObjectDiscard() {
     externalConnections.clear();
     pendingConnections.clear();
     entityConnections.clear();
