@@ -16,7 +16,7 @@ class ThirdService {
     channel.onDispose.whenComplete(() => log('Channel was disposed, stopping channel logic', name: 'ThirdService')).ignore();
     channel
         .getReceiver()
-        .onCorrectLambda(
+        .select(
           (x) => x.listen((text) {
             log('Client sent: $text', name: 'ThirdService');
           }),

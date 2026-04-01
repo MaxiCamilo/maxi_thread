@@ -26,7 +26,7 @@ class SecondService {
         .service<ThirdService>()
         .buildChannel<String, int>(function: (serv, channel, para) => serv.createRandomChannel(channel))
         .injectLogic(
-          (x) => x.getReceiver().onCorrectLambda(
+          (x) => x.getReceiver().select(
             (y) => y.listen((data) {
               log('Received data in ThirdService channel: $data', name: 'SecondService');
             }),

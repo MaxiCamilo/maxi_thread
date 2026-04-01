@@ -48,7 +48,7 @@ class IsolateReferenceChannel<R, S> with DisposableMixin, LifecycleHub implement
     if (isolateThread.itsFailure) {
       return isolateThread.cast();
     }
-    return isolateThread.content.searchOriginChannel(channelID).onCorrectLambda((x) => x.receiveExternalItem(item)).ignoreContent();
+    return isolateThread.content.searchOriginChannel(channelID).injectLogic((x) => x.receiveExternalItem(item)).ignoreContent();
   }
 
   Result<void> receiveExternalItem(dynamic item) {
@@ -72,7 +72,6 @@ class IsolateReferenceChannel<R, S> with DisposableMixin, LifecycleHub implement
 
   @override
   void performObjectDiscard() {
-
     origin.executeResult(parameters: InvocationParameters.only(channelId), function: _declareFinished);
   }
 
@@ -84,6 +83,6 @@ class IsolateReferenceChannel<R, S> with DisposableMixin, LifecycleHub implement
       return isolateThread.cast();
     }
 
-    return isolateThread.content.searchOriginChannel(channelID).onCorrectLambda((x) => x.dispose()).ignoreContent();
+    return isolateThread.content.searchOriginChannel(channelID).injectVoidLogic((x) => x.dispose()).ignoreContent();
   }
 }

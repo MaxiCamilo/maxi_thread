@@ -75,7 +75,7 @@ class IsolateOriginChannel<R, S> with DisposableMixin, LifecycleHub implements C
     }
     return isolateThread.content
         .searchReferenceChannel(channelID)
-        .onCorrectLambda((x) => x.receiveExternalItem(item))
+        .onCorrect((x) => x.receiveExternalItem(item))
         .ignoreContent()
         .logIfFails(
           errorName:
@@ -104,7 +104,6 @@ class IsolateOriginChannel<R, S> with DisposableMixin, LifecycleHub implements C
 
   @override
   void performObjectDiscard() {
-
     origin.executeResult(parameters: InvocationParameters.only(channelId), function: _declareFinished);
   }
 
@@ -116,6 +115,6 @@ class IsolateOriginChannel<R, S> with DisposableMixin, LifecycleHub implements C
       return isolateThread.cast();
     }
 
-    return isolateThread.content.searchReferenceChannel(channelID).onCorrectLambda((x) => x.dispose()).ignoreContent().logIfFails(errorName: 'IsolateOriginChannel -> _declareFinished: Failed to declare finished');
+    return isolateThread.content.searchReferenceChannel(channelID).injectVoidLogic((x) => x.dispose()).ignoreContent().logIfFails(errorName: 'IsolateOriginChannel -> _declareFinished: Failed to declare finished');
   }
 }
