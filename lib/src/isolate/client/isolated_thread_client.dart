@@ -289,4 +289,21 @@ class IsolatedThreadClient extends IsolatedThread {
       );
     }
   }
+
+  @override
+  Result<void> defineThreadEntity<T extends Object>({required T item, bool removePrevious = false}) {
+    if (!removePrevious && entity != null) {
+      return NegativeResult.controller(
+        code: ErrorCode.implementationFailure,
+        message: const FixedOration(message: 'This thread already manages an entity, and removePrevious is set to false'),
+      );
+    }
+
+    if (entity != null && entity is Disposable) {
+      (entity as Disposable).dispose();
+    }
+
+    entity = item;
+    return voidResult;
+  }
 }

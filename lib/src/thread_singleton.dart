@@ -87,4 +87,9 @@ class ThreadManagerInitializer implements ThreadManager {
 
   @override
   BackgroundThreadService get backgroundService => _defineThreadSystem().backgroundService;
+
+  @override
+  Result<void> defineThreadEntity<T extends Object>({required T item, bool removePrevious = false}) {
+    return _defineThreadSystem().defineThreadEntity<T>(item: item, removePrevious: removePrevious);
+  }
 }

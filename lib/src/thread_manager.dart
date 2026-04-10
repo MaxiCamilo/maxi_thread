@@ -19,6 +19,7 @@ abstract interface class ThreadManager implements Disposable {
   FutureResult<ThreadConnection> obtainConnectionFromIdentifier({required int threadIdentifier});
 
   Result<T> getThreadEntity<T>();
+  Result<void> defineThreadEntity<T extends Object>({required T item, bool removePrevious = false});
 
   Result<T> obtainThreadObject<T extends Object>({required String name});
   Result<void> defineThreadObject<T extends Object>({required String name, required T object, bool removePrevious = true});

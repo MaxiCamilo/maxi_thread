@@ -10,3 +10,6 @@ export 'src/shared/shared_event.dart';
 export 'src/shared/shared_value.dart';
 
 export 'src/extensions/stream_skill_extension.dart';
+
+export 'src/anonymous/anonymous_entity_thread.dart';
+export 'src/anonymous/build_anonymous_entity_thread.dart';

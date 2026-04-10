@@ -224,4 +224,12 @@ class IsolatedThreadServer extends IsolatedThread {
       message: const FixedOration(message: 'Cannot get thread entity: only isolate thread client can process this request'),
     );
   }
+  
+  @override
+  Result<void> defineThreadEntity<T extends Object>({required T item, bool removePrevious = false}) {
+    return NegativeResult.controller(
+      code: ErrorCode.invalidFunctionality,
+      message: const FixedOration(message: 'Cannot define thread entity: only isolate thread client can process this request'),
+    );
+  }
 }
