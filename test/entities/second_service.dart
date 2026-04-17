@@ -13,10 +13,14 @@ class SecondService {
       return servResult.cast();
     }
 
+    await InteractiveSystem.sendValueAsync(value: 'Hola maxiiii!');
+
     final callResult = await servResult.content.executeResult(function: (serv, para) => serv.sayHi());
     if (callResult.itsFailure) {
       return callResult.cast();
     }
+
+    await InteractiveSystem.sendValueAsync(value: 'Adios maxiiiii!');
 
     return voidResult;
   }

@@ -9,6 +9,7 @@ class ThirdService {
   ThirdService({required this.name});
 
   Result<String> sayHi() {
+    InteractiveSystem.sendValue(value: 'Pre-hola del tercer hilo');
     return 'Hola Hola desde el tercer hilo, en español obvio'.asResultValue();
   }
 
@@ -31,7 +32,6 @@ class ThirdService {
       await Future.delayed(const Duration(seconds: 1));
       channel.sendItem(i);
     }
-
 
     return voidResult;
   }

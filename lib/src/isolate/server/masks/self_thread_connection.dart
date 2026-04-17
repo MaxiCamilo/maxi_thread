@@ -32,7 +32,7 @@ class SelfThreadConnection implements ThreadConnection {
   bool get itWasDiscarded => isolatedThread.itWasDiscarded;
 
   @override
-  Future<dynamic> get onDispose => isolatedThread.onDispose;
+  TinyEvent<dynamic> get onDispose => isolatedThread.onDispose;
 
   @override
   FutureResult<void> requestClosure() async {

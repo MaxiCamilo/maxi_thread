@@ -58,6 +58,7 @@ class IsolateMessageResultFunction<T> {
 
   FutureResult<T> execute() async {
     final result = await function(parameters);
+    await Future.delayed(Duration.zero);
     if (returnsResult) {
       return result as Result<T>;
     } else {
@@ -70,9 +71,9 @@ class IsolateMessageResultFunction<T> {
 /** */
 
 /// Represents a request for an isolate message, containing the type of request, an identifier, and an optional payload. This class is used to encapsulate information about a request being made within an isolate, allowing for communication and coordination between different parts of the system. The `IsolateMessageRequest` class includes a `type` that indicates the nature of the request (e.g., create function, message, or cancel), an `id` to track the request, and an optional `payload` that can carry additional data related to the request. This structure enables effective communication and handling of requests within an isolate, facilitating asynchronous operations and interactions between different components of the system.
-enum IsolateMessageRequestType { createFunction, message, cancel }
+enum IsolateMessageRequestType { createFunction, cancel, message }
 
-/// Represents a request for an isolate message, containing the type of request, an identifier, and an optional payload. This class is used to encapsulate information about a request being made within an isolate, allowing for communication and coordination between different parts of the system. The `IsolateMessageRequest` class includes a `type` that indicates the nature of the request (e.g., create function, message, or cancel), an `id` to track the request, and an optional `payload` that can carry additional data related to the request. This structure enables effective communication and handling of requests within an isolate, facilitating asynchronous operations and interactions between different components of the system. The `IsolateMessageRequest` class serves as a fundamental component for managing and processing requests within an isolate, enabling efficient task management and coordination in a concurrent environment.  
+/// Represents a request for an isolate message, containing the type of request, an identifier, and an optional payload. This class is used to encapsulate information about a request being made within an isolate, allowing for communication and coordination between different parts of the system. The `IsolateMessageRequest` class includes a `type` that indicates the nature of the request (e.g., create function, message, or cancel), an `id` to track the request, and an optional `payload` that can carry additional data related to the request. This structure enables effective communication and handling of requests within an isolate, facilitating asynchronous operations and interactions between different components of the system. The `IsolateMessageRequest` class serves as a fundamental component for managing and processing requests within an isolate, enabling efficient task management and coordination in a concurrent environment.
 class IsolateMessageRequest {
   final IsolateMessageRequestType type;
   final int id;
@@ -82,17 +83,3 @@ class IsolateMessageRequest {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/** */
-
-/// Represents an interactive message for an isolate task, containing the message content and providing a method to react to the message using a list of interactive functions. This class is used to encapsulate information about an interactive message within an isolate, allowing for dynamic handling and processing of messages. The `IsolateTaskInteractiveMessage` class includes a `message` that holds the content of the message and a `react` method that iterates through a list of interactive functions, invoking each function with the message as a parameter. This structure enables flexible and responsive handling of interactive messages within an isolate, facilitating real-time interactions and dynamic behavior.
-class IsolateTaskInteractiveMessage<T> {
-  final T message;
-
-  const IsolateTaskInteractiveMessage({required this.message});
-
-  void react({required List<Function> interactiveFunctions}) {
-    for (final func in interactiveFunctions.whereType<void Function(T)>()) {
-      func(message);
-    }
-  }
-}

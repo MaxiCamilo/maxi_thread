@@ -45,6 +45,7 @@ class IsolateTaskSender with DisposableMixin {
     }
 
     final task = _createTaskInstance<T>(id: sendResult.content.id);
+
     return await task.waitResult();
   }
 
@@ -63,6 +64,7 @@ class IsolateTaskSender with DisposableMixin {
     }
 
     final task = _createTaskInstance<T>(id: sendResult.content.id);
+
     return await task.waitResult();
   }
 
@@ -104,7 +106,7 @@ class IsolateTaskSender with DisposableMixin {
 
   /// Creates a new task instance for a given task ID and manages its lifecycle. The method adds the new task instance to the list of active tasks and sets up a listener to remove the task from the list when it is disposed. Additionally, it checks for the presence of a zone heart and sets up a listener to handle the disposal of the task if the heart is disposed, ensuring that tasks are properly cleaned up in response to changes in the application lifecycle. This method allows the sender to effectively manage the lifecycle of tasks and ensure proper disposal when necessary, preventing memory leaks and ensuring that ongoing tasks are appropriately terminated in response to application lifecycle events.
   _IsolateTaskInstance<T> _createTaskInstance<T>({required int id}) {
-    final task = _IsolateTaskInstance<T>(id: id);
+    final task = _IsolateTaskInstance<T>(id: id, sender: this);
     _tasks.add(task);
     task.onDispose.whenComplete(() {
       if (!task.isCompleted) {
@@ -149,11 +151,8 @@ class IsolateTaskSender with DisposableMixin {
       case IsolateMessageStatusType.message:
         final task = _tasks.selectItem((x) => x.id == event.id);
         if (task != null) {
-          task.receiveMessage(event.payload);
-        } else {
-          log('[IsolateTaskSender] Received an isolate message for thread $threadName, but there was no matching task with id ${event.id}');
+          task.messageReceiver?.call(event.payload);
         }
-        break;
     }
   }
 }
@@ -164,27 +163,44 @@ class IsolateTaskSender with DisposableMixin {
 /// Represents a connection for sending tasks to an isolate thread that is associated with a specific entity type `T`. The `IsolateEntityTaskSender` class manages the sending of task requests related to a particular entity type, allowing for structured communication and task management in an isolated environment. It provides methods for executing functions that return results or results wrapped in a `Result` type, specifically for tasks related to the entity type `T`. This class is designed to facilitate the execution of tasks in an isolate thread while maintaining a clear association with a specific entity type, enabling effective handling of tasks and communication in a concurrent environment.
 class _IsolateTaskInstance<T> with DisposableMixin {
   final int id;
+  final IsolateTaskSender sender;
+
+  late final LifeCoordinator? lifeCoordinator;
+  void Function(dynamic value)? messageReceiver;
 
   final _completer = Completer<Result<T>>();
-  late final List<Function> _interactiveFunctions;
 
   bool get isCompleted => _completer.isCompleted;
 
-  _IsolateTaskInstance({required this.id}) {
-    _interactiveFunctions = InteractiveSystem.getAllSenders();
+  _IsolateTaskInstance({required this.id, required this.sender}) {
+    lifeCoordinator = LifeCoordinator.tryGetZoneHeart;
+    _programerInteractiveMessages();
   }
 
-  /// Handles the reception of a message for the task by determining its type and processing it accordingly. If the message is an interactive message, it reacts to it using the available interactive functions. If the message is of an unexpected type, it logs a warning message indicating that an unexpected message type was received for the task. This method allows the task instance to effectively manage incoming messages and interact with them based on their type, facilitating communication and interaction within the isolate thread.
-  void receiveMessage(dynamic message) {
-    if (_completer.isCompleted) {
-      log('[IsolateTaskInstance] Received a message for a task #$id that is already completed. Message: ${message.message}');
+  void _programerInteractiveMessages() {
+    final mainChannelResult = InteractiveSystem.obtainChannel();
+    if (mainChannelResult.itsFailure) {
       return;
     }
-    if (message is IsolateTaskInteractiveMessage) {
-      message.react(interactiveFunctions: _interactiveFunctions);
-    } else {
-      log('[IsolateTaskInstance] Received a message for a task #$id with an unexpected type: ${message.runtimeType}');
+
+    final channel = mainChannelResult.content;
+    if (channel.itWasDiscarded) {
+      return;
     }
+
+    messageReceiver = (value) {
+      channel.sendItem(InteractiveSystemValue(value: value, payload: this));
+    };
+
+    channel.buildConnector().select(
+      (x) => x.getReceiver().select(
+        (stream) => stream.where((x) => x.payload != this).listen((message) {
+          sender.channel
+              .send(IsolateMessageRequest(type: IsolateMessageRequestType.message, id: id, payload: message.value))
+              .logIfFails(errorName: 'Failed to send a message from the isolate task instance with id $id in thread ${sender.threadName}');
+        }),
+      ),
+    );
   }
 
   /// Waits for the result of the task to be defined and returns it as a `Result` type. If the result is defined successfully, it returns the result wrapped in a `Result` type. If there is an error during execution or if the task is discarded before a result is defined, it returns an appropriate error wrapped in a `Result` type. This method allows for structured communication and error handling when waiting for the result of a task being executed in the isolate thread.

@@ -47,28 +47,20 @@ class IsolateTaskProcessor with DisposableMixin, LifecycleHub {
       return;
     }
 
-    final task = AsyncExecutor(function: () => function(id));
-    lifecycleScope.joinDisposableObject(task);
+    late final AsyncExecutor task;
 
-    task.createListenerStream().listen(
-      (x) {
-        final sendResult = channel.send(IsolateMessageStatus(type: IsolateMessageStatusType.message, id: id, payload: x));
-        if (sendResult.itsFailure) {
-          log('[IsolateTaskProcessor] Failed to send an execution result message for task with id $id in thread $threadName. Error: $sendResult');
-        }
-      },
-      onError: (e) {
-        final sendResult = channel.send(IsolateMessageStatus(type: IsolateMessageStatusType.message, id: id, payload: e));
-        if (sendResult.itsFailure) {
-          log('[IsolateTaskProcessor] Failed to send an execution result message for task with id $id in thread $threadName. Error: $sendResult');
-        }
+    task = AsyncExecutor(
+      connectToZone: false,
+      function: () {
+        _programmerInteractiveMessages(id);
+        return function(id);
       },
     );
+    lifecycleScope.joinDisposableObject(task);
 
     _currentTask[id] = task;
     task.onDispose.whenComplete(() => _currentTask.remove(id));
 
-    await Future.delayed(Duration.zero);
     final result = await task.waitResult(zoneValues: {ThreadManager.kThreadManagerZone: threadSystem, ThreadConnection.kThreadConnectionZone: threadConnection});
     final sendResult = channel.send(IsolateMessageStatus(type: IsolateMessageStatusType.executeResult, id: id, payload: result));
     if (sendResult.itsFailure) {
@@ -87,24 +79,25 @@ class IsolateTaskProcessor with DisposableMixin, LifecycleHub {
           .logIfFails(errorName: 'IsolateTaskProcessor -> _confirmTask: Failed to send negative result message');
       return;
     }
-    
   }
 
   /// Routes incoming task requests to the appropriate handler based on the request type.
   ///
   /// Processes [IsolateMessageRequest] events by switching on the request type:
   /// - [IsolateMessageRequestType.createFunction]: Creates and executes a new task function
-  /// - [IsolateMessageRequestType.message]: Not supported, throws [UnimplementedError]
+  /// - [IsolateMessageRequestType.message]: Processes a message for an existing task
   /// - [IsolateMessageRequestType.cancel]: Cancels the task with the specified ID
   void _processRequest(IsolateMessageRequest event) {
     switch (event.type) {
       case IsolateMessageRequestType.createFunction:
         _createFunction(event);
         break;
-      case IsolateMessageRequestType.message:
-        throw UnimplementedError('IsolateTaskProcessor does not process messages of type "message". Received message with id ${event.id} in thread $threadName.');
+
       case IsolateMessageRequestType.cancel:
         _currentTask[event.id]?.dispose();
+        break;
+      case IsolateMessageRequestType.message:
+        _currentTask[event.id]?.sendMessage(value: event.payload, payload: threadConnection);
         break;
     }
   }
@@ -120,7 +113,16 @@ class IsolateTaskProcessor with DisposableMixin, LifecycleHub {
     });
   }
 
-  @override
-  void performObjectDiscard() {
+  void _programmerInteractiveMessages(int id) {
+    InteractiveSystem.receiveValues(filter: (item, payload) => payload != threadConnection).selectVoid((stream) {
+      stream.listen((item) {
+        channel
+            .send(IsolateMessageStatus(type: IsolateMessageStatusType.message, id: id, payload: item))
+            .logIfFails(errorName: 'IsolateTaskProcessor -> _programmerInteractiveMessages: Failed to send an interactive message from the programmer interactive system');
+      });
+    });
   }
+
+  @override
+  void performObjectDiscard() {}
 }

@@ -36,7 +36,9 @@ class UnsupportedThreadConnection implements ThreadConnection {
   String get name => '¿?';
 
   @override
-  Future<dynamic> get onDispose async {}
+  TinyEvent<dynamic> get onDispose {
+    throw UnsupportedError('This connection does not support events');
+  }
 
   @override
   FutureResult<void> requestClosure() async {

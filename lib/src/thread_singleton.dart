@@ -58,7 +58,7 @@ class ThreadManagerInitializer implements ThreadManager {
   }
 
   @override
-  Future<dynamic> get onDispose => _defineThreadSystem().onDispose;
+  TinyEvent<dynamic> get onDispose => _defineThreadSystem().onDispose;
 
   @override
   FutureResult<ThreadConnection> createThread({required String name, List<Functionality<dynamic>> initializers = const []}) {
