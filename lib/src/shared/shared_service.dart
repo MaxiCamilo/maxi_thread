@@ -112,7 +112,7 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
       onDone: () => channel.dispose(),
     );
 
-    await channel.onDispose;
+    await channel.onDispose.toFuture();
     subscription.cancel();
     return voidResult;
   }

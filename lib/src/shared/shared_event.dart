@@ -24,7 +24,7 @@ class SharedEvent<T> with DisposableMixin, AsynchronouslyInitializedMixin implem
       return regResult.cast();
     }
 
-    await channel.onDispose;
+    await channel.onDispose.toFuture();
     return voidResult;
   }
 

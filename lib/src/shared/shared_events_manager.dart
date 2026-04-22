@@ -49,9 +49,9 @@ class SharedEventsManager with DisposableMixin {
     for (final channel in list) {
       if (channel == originChannel) continue;
 
-      if (channel.senderType == T) {
-        channel.sendItem(item).logIfFails(errorName: 'SharedEventsManager._sendResult -> Failed to send event item to channel');
-      }
+      //if (channel.senderType == T) {
+      channel.sendItem(item).logIfFails(errorName: 'SharedEventsManager._sendResult -> Failed to send event item to channel');
+      //}
     }
   }
 

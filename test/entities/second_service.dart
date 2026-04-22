@@ -52,7 +52,7 @@ class SecondService {
 
           return voidResult;
         })
-        .onCorrectFutureVoid((x) async => await x.onDispose)
+        .onCorrectFutureVoid((x) async => await x.onDispose.toFuture())
         .onCorrectFutureVoid((_) => log('Channel was disposed', name: 'SecondService'))
         .onCorrectFutureVoid((x) => Future.delayed(const Duration(seconds: 5)).whenComplete(() => log('Finished waiting after channel disposal', name: 'SecondService')))
         .onCorrectFutureVoid((_) async {

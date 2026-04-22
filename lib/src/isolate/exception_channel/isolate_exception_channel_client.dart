@@ -23,7 +23,7 @@ class IsolateExceptionChannelClient with DisposableMixin, AsynchronouslyInitiali
     _streamController = lifecycleScope.joinStreamController(StreamController<(dynamic, StackTrace)>.broadcast());
 
     final receiverResult = _serverChannel.getReceiver();
-    if(receiverResult.itsFailure){
+    if (receiverResult.itsFailure) {
       return receiverResult.cast();
     }
 
@@ -50,7 +50,7 @@ class IsolateExceptionChannelClient with DisposableMixin, AsynchronouslyInitiali
       return connectionResult.cast();
     }
 
-    await channel.onDispose;
+    await channel.onDispose.toFuture();
     return voidResult;
   }
 
