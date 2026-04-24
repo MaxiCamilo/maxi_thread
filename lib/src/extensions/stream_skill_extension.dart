@@ -20,7 +20,7 @@ extension StreamSkillConnectionExtension on ThreadConnection {
     final channel = newChannelResult.content;
     final streamController = StreamController<T>();
 
-    final streamResult = channel.getReceiver().select((streamItem) {
+    final streamResult = channel.getReceiver().onCorrectSelect((streamItem) {
       streamItem.listen(
         (x) {
           streamController.add(x);
@@ -102,7 +102,7 @@ extension StreamSkillEntityConnectionExtension<T> on EntityThreadConnection<T> {
     final channel = newChannelResult.content;
     final streamController = StreamController<R>();
 
-    final streamResult = channel.getReceiver().onCorrectLambda((streamItem) {
+    final streamResult = channel.getReceiver().onCorrectSelect((streamItem) {
       streamItem.listen(
         (x) {
           streamController.add(x);

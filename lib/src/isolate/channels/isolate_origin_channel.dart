@@ -69,7 +69,7 @@ class IsolateOriginChannel<R, S> with DisposableMixin, LifecycleHub implements C
     final channelID = para.first<int>();
     final item = para.second();
 
-    final isolateThread = threadSystem.dynamicCastResult<IsolatedThread>(errorMessage: const FixedOration(message: 'Failed to cast thread system to IsolatedThread')).select((x) => x.channelManager);
+    final isolateThread = threadSystem.dynamicCastResult<IsolatedThread>(errorMessage: const FixedOration(message: 'Failed to cast thread system to IsolatedThread')).onCorrectSelect((x) => x.channelManager);
     if (isolateThread.itsFailure) {
       return isolateThread.cast();
     }
@@ -110,7 +110,7 @@ class IsolateOriginChannel<R, S> with DisposableMixin, LifecycleHub implements C
   static Future<Result<void>> _declareFinished(InvocationParameters para) async {
     final channelID = para.first<int>();
 
-    final isolateThread = threadSystem.dynamicCastResult<IsolatedThread>(errorMessage: const FixedOration(message: 'Failed to cast thread system to IsolatedThread')).select((x) => x.channelManager);
+    final isolateThread = threadSystem.dynamicCastResult<IsolatedThread>(errorMessage: const FixedOration(message: 'Failed to cast thread system to IsolatedThread')).onCorrectSelect((x) => x.channelManager);
     if (isolateThread.itsFailure) {
       return isolateThread.cast();
     }

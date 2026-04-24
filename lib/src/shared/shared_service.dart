@@ -12,8 +12,11 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
 
   late StreamController<(String, Object)> _objectChangeController;
 
-  static FutureResult<EntityThreadConnection<SharedService>> connection() {
-    return threadSystem.createEntityThread<SharedService>(instance: SharedService(), omitIfExists: true);
+  late Map<String, (int, int, Type, TinyEvent)> _sharedOperators;
+
+  static FutureResult<EntityThreadConnection<SharedService>> connection() async {
+    await Future.delayed(Duration.zero);
+    return await threadSystem.createEntityThread<SharedService>(instance: SharedService(), omitIfExists: true);
   }
 
   @override
@@ -21,6 +24,7 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
     _sharedObjectMap = <String, Object>{};
     eventManager = lifecycleScope.joinDisposableObject(SharedEventsManager());
     _objectChangeController = lifecycleScope.joinStreamController(StreamController<(String, Object)>.broadcast());
+    _sharedOperators = <String, (int, int, Type, TinyEvent)>{};
     return voidResult;
   }
 
@@ -116,8 +120,65 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
     subscription.cancel();
     return voidResult;
   }
-  
-  @override
-  void performObjectDiscard() {
+
+  Result<bool> isOperatorRegistered({required String name, required Type operatorType}) {
+    final exists = _sharedOperators[name];
+    if (exists == null) return false.asResultValue();
+
+    if (exists.$3 != operatorType) {
+      return NegativeResult.controller(
+        code: ErrorCode.invalidFunctionality,
+        message: FlexibleOration(message: 'An operator with the name %1 is already registered but with a different type (%2)', textParts: [name, exists.$3]),
+      );
+    }
+    return true.asResultValue();
   }
+
+  Result<void> registerOperator({required String name, required int operatorId, required Type operatorType, bool removePrevious = true}) {
+    final exists = _sharedOperators[name];
+    if (exists != null) {
+      if (removePrevious) {
+        _sharedOperators.remove(name);
+      } else {
+        return NegativeResult.controller(
+          code: ErrorCode.invalidFunctionality,
+          message: FlexibleOration(message: 'An operator with the name %1 is already registered', textParts: [name]),
+        );
+      }
+    }
+
+    final onDispose = ThreadConnection.threadZone.onDispose.whenComplete(() => _sharedOperators.remove(name));
+
+    _sharedOperators[name] = (ThreadConnection.threadZone.identifier, operatorId, operatorType, onDispose);
+    return voidResult;
+  }
+
+  Result<(int, int)> obtainOperatorAddress({required String name, required Type operatorType}) {
+    final exists = _sharedOperators[name];
+    if (exists == null) {
+      return NegativeResult.controller(
+        code: ErrorCode.invalidFunctionality,
+        message: FlexibleOration(message: 'No operator is registered with the name %1', textParts: [name]),
+      );
+    }
+
+    if (exists.$3 != operatorType) {
+      return NegativeResult.controller(
+        code: ErrorCode.invalidFunctionality,
+        message: FlexibleOration(message: 'The operator registered with the name %1 is not of the expected type (%2)', textParts: [name, operatorType]),
+      );
+    }
+
+    return (exists.$1, exists.$2).asResultValue();
+  }
+
+  void removeOperator({required String name}) {
+    final exists = _sharedOperators.remove(name);
+    if (exists != null) {
+      exists.$4.ignore();
+    }
+  }
+
+  @override
+  void performObjectDiscard() {}
 }

@@ -192,8 +192,8 @@ class _IsolateTaskInstance<T> with DisposableMixin {
       channel.sendItem(InteractiveSystemValue(value: value, payload: this));
     };
 
-    channel.buildConnector().select(
-      (x) => x.getReceiver().select(
+    channel.buildConnector().onCorrectSelect(
+      (x) => x.getReceiver().onCorrectSelect(
         (stream) => stream.where((x) => x.payload != this).listen((message) {
           sender.channel
               .send(IsolateMessageRequest(type: IsolateMessageRequestType.message, id: id, payload: message.value))

@@ -8,6 +8,7 @@ export 'src/background_thread_service.dart';
 
 export 'src/shared/shared_event.dart';
 export 'src/shared/shared_value.dart';
+export 'src/shared/shared_operator.dart';
 
 export 'src/extensions/stream_skill_extension.dart';
 

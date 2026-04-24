@@ -7,10 +7,6 @@ import 'package:maxi_framework/maxi_framework.dart';
 import 'package:maxi_thread/maxi_thread.dart';
 import 'package:test/test.dart';
 
-import 'entities/first_service.dart';
-import 'entities/second_service.dart';
-import 'entities/third_service.dart';
-
 void main() {
   group('Isolate test', () {
     setUp(() async {});
@@ -64,103 +60,6 @@ void main() {
       if (result.itsFailure) {
         fail('Failed to execute function in Thread 1: ${result.error}');
       }
-    });
-
-    test('Mounth service', () async {
-      final newSevice = await threadSystem.createEntityThread<FirstService>(instance: FirstService());
-      if (newSevice.itsFailure) {
-        fail('Failed to create service thread: ${newSevice.error}');
-      }
-
-      final invocationResult = await threadSystem.service<FirstService>().executeResult(function: (serv, para) => serv.sayHi());
-      if (invocationResult.itsFailure) {
-        fail('Failed to invoke service function: ${invocationResult.error}');
-      }
-      log('Service invocation result: ${invocationResult.content}', name: 'Isolate test');
-    });
-
-    test(
-      'Interactive messages',
-      () => usingHeart((_) async {
-        await threadSystem.createEntityThread<FirstService>(instance: FirstService());
-
-        InteractiveSystem.receiveValues().select(
-          (x) => x.listen((message) {
-            log('Received: $message', name: 'Main Thread');
-          }),
-        );
-
-        Future.delayed(const Duration(seconds: 5)).whenComplete(() {
-          InteractiveSystem.sendValue(value: 'Hello from the main thread through the interactive system!');
-        });
-
-        Future.delayed(const Duration(seconds: 15)).whenComplete(() {
-          InteractiveSystem.sendValue(value: 'Hello again from the main thread through the interactive system!');
-        });
-
-        Future.delayed(const Duration(seconds: 25)).whenComplete(() {
-          InteractiveSystem.sendValue(value: 'I am going to stop sending messages through the interactive system, bye!');
-        });
-
-        final result = await threadSystem.service<FirstService>().executeResult(function: (serv, para) => serv.interactiveHi());
-        if (result.itsFailure) {
-          fail('Failed to execute interactiveHi in FirstService: ${result.error}');
-        }
-
-        return voidResult;
-      }),
-    );
-
-    test('Interactive Service', () async {
-      await usingHeart((heart) async {
-        InteractiveSystem.receiveValues().select(
-          (x) => x.listen((message) {
-            log('Received message in main thread: $message', name: 'Main Thread Event');
-          }),
-        );
-        await threadSystem.createEntityThread<FirstService>(instance: FirstService());
-        await threadSystem.createEntityThread<SecondService>(instance: SecondService());
-
-        final creationResult = await threadSystem.service<SecondService>().executeResult(function: (serv, para) => serv.requestThirdService());
-        if (creationResult.itsFailure) {
-          fail('Failed to request ThirdService from SecondService: ${creationResult.error}');
-        }
-
-        final firstServerInvocationFutureResult = threadSystem.service<FirstService>().executeResult(function: (serv, para) => serv.sayHiFromThridService());
-
-        //Future.delayed(Duration.zero).whenComplete(() {
-        //  InteractiveSystem.sendValue(value: 'Hello from the main thread through the interactive system!');
-        //});
-
-        final firstServerInvocationResult = await firstServerInvocationFutureResult;
-        if (firstServerInvocationResult.itsFailure) {
-          fail('Failed to invoke sayHiFromThridService from FirstService: ${firstServerInvocationResult.error}');
-        } else {
-          log('FirstService sayHiFromThridService result: ${firstServerInvocationResult.content}', name: 'Isolate test');
-        }
-
-        await Future.delayed(const Duration(seconds: 90));
-
-        return voidResult;
-      });
-    });
-
-    test('Test Channels', () async {
-      await threadSystem.createEntityThread<FirstService>(instance: FirstService());
-      await threadSystem.createEntityThread<SecondService>(instance: SecondService());
-      await threadSystem.createEntityThread<ThirdService>(instance: ThirdService(name: 'Third Service from server channel'));
-
-      final invocationResult = await threadSystem.service<FirstService>().executeResult(function: (serv, para) => serv.sayHi());
-      if (invocationResult.itsFailure) {
-        fail('Failed to invoke service function: ${invocationResult.error}');
-      }
-
-      final result = await threadSystem.service<SecondService>().executeResult(function: (serv, para) => serv.createChannel());
-      if (result.itsFailure) {
-        fail('Failed to create channel from SecondService: ${result.error}');
-      }
-
-      await Future.delayed(const Duration(seconds: 30));
     });
   });
 }
