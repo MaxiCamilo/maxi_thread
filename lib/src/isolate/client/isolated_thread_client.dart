@@ -265,9 +265,11 @@ class IsolatedThreadClient extends IsolatedThread {
   /// Disposes of the thread client by closing the connection with the server and exiting the isolate after a short delay.
   void performObjectDiscard() {
     super.performObjectDiscard();
-    serverConnection.dispose();
-    Future.delayed(const Duration(milliseconds: 10)).whenComplete(() {
-      Isolate.exit();
+    Future.delayed(Duration.zero).whenComplete(() {
+      serverConnection.dispose();
+      Future.delayed(const Duration(milliseconds: 10)).whenComplete(() {
+        Isolate.exit();
+      });
     });
   }
 

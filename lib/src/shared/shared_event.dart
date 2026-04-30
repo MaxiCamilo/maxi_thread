@@ -42,6 +42,16 @@ class SharedEvent<T> with DisposableMixin, AsynchronouslyInitializedMixin implem
     return ResultValue(content: func());
   }
 
+  FutureResult<Stream<T>> getAsyncReceiver() async {
+    final initRes = await initialize();
+    if (initRes.itsFailure) return initRes.cast();
+
+    final streamRes = _channel.getReceiver();
+    if (streamRes.itsFailure) return streamRes.cast();
+
+    return streamRes;
+  }
+
   @override
   Result<void> sendItem(T item) {
     if (isInitialized) {
