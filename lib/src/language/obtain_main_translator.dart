@@ -6,6 +6,15 @@ class ObtainMainTranslator with FunctionalityMixin<void> {
 
   @override
   FutureResult<void> runInternalFuncionality() async {
+    final idResult = await threadSystem.serverConnection.executeResult(function: _getUniqueID);
+    if (idResult.itsFailure) {
+      return idResult.cast();
+    }
+
+    if (idResult.content == appTranslator.uniqueID) {
+      return voidResult;
+    }
+
     final extractionResult = await threadSystem.serverConnection.executeResult(function: _getTranslatorOnServer);
     if (extractionResult.itsFailure) {
       return extractionResult.cast();
@@ -17,6 +26,10 @@ class ObtainMainTranslator with FunctionalityMixin<void> {
     }
 
     return voidResult;
+  }
+
+  static Result<int> _getUniqueID(InvocationParameters para) {
+    return appTranslator.uniqueID.asResultValue();
   }
 
   static FutureResult<TranslatorForOrations> _getTranslatorOnServer(InvocationParameters para) {
