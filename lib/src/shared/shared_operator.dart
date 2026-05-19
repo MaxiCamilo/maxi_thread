@@ -114,7 +114,7 @@ class SharedOperator<T extends Object> implements Disposable, EntityThreadConnec
   }
 
   @override
-  Future<Result<R>> executeResult<R>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<R>> Function(T serv, InvocationParameters para) function}) async {
+  Future<Result<R>> executeResult<R>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<R>> Function(T oper, InvocationParameters para) function}) async {
     final itsLocal = _localOperators.values.selectItem((entry) => entry.$1 == name);
     if (itsLocal != null) {
       final localOperator = itsLocal.$2;
