@@ -72,7 +72,7 @@ class SharedOperator<T extends Object> implements Disposable, EntityThreadConnec
           .injectNegativeLogic((_) {
             _localOperators.remove(newID);
           })
-          .injectLogic((_) async {
+          .laterLogic((_) async {
             if (newOperator is Disposable) {
               newOperator.onDispose.whenComplete(dispose);
             }

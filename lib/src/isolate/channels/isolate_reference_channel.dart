@@ -48,7 +48,7 @@ class IsolateReferenceChannel<R, S> with DisposableMixin, LifecycleHub implement
     if (isolateThread.itsFailure) {
       return isolateThread.cast();
     }
-    return isolateThread.content.searchOriginChannel(channelID).injectLogic((x) => x.receiveExternalItem(item)).ignoreContent();
+    return isolateThread.content.searchOriginChannel(channelID).laterLogic((x) => x.receiveExternalItem(item)).ignoreContent();
   }
 
   Result<void> receiveExternalItem(dynamic item) {
