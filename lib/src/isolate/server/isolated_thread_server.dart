@@ -112,6 +112,13 @@ class IsolatedThreadServer extends IsolatedThread {
 
   @override
   FutureResult<EntityThreadConnection<T>> createEntityThread<T>({required T instance, bool omitIfExists = true}) async {
+    if (T == dynamic) {
+      return NegativeResult.controller(
+        code: ErrorCode.implementationFailure,
+        message: const FixedOration(message: 'Cannot create entity thread for dynamic type'),
+      );
+    }
+
     final initializing = _entityCreationMutexes[T];
     if (initializing != null) {
       await initializing.execute(() async {});
@@ -224,7 +231,7 @@ class IsolatedThreadServer extends IsolatedThread {
       message: const FixedOration(message: 'Cannot get thread entity: only isolate thread client can process this request'),
     );
   }
-  
+
   @override
   Result<void> defineThreadEntity<T extends Object>({required T item, bool removePrevious = false}) {
     return NegativeResult.controller(
