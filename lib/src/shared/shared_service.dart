@@ -8,6 +8,7 @@ import 'package:rxdart/rxdart.dart';
 
 class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
   late Map<String, Object> _sharedObjectMap;
+  late Map<String, Mutex> _sharedMutexMap;
   late SharedEventsManager eventManager;
 
   late StreamController<(String, Object)> _objectChangeController;
@@ -25,6 +26,7 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
     eventManager = lifecycleScope.joinDisposableObject(SharedEventsManager());
     _objectChangeController = lifecycleScope.joinStreamController(StreamController<(String, Object)>.broadcast());
     _sharedOperators = <String, (int, int, Type, TinyEvent)>{};
+    _sharedMutexMap = <String, Mutex>{};
     return voidResult;
   }
 
@@ -32,9 +34,13 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
     return _sharedObjectMap[name] is T;
   }
 
-  Result<T> obtainSharedObject<T>({required String name}) {
+  Result<T> obtainSharedObject<T>({required String name, T? defaultValue}) {
     final item = _sharedObjectMap[name];
     if (item == null) {
+      if (defaultValue != null) {
+        _sharedObjectMap[name] = defaultValue;
+        return defaultValue.asResultValue();
+      }
       return NegativeResult.controller(
         code: ErrorCode.invalidFunctionality,
         message: FlexibleOration(message: 'No object of type %1 is registered with the name %2', textParts: [T, name]),
@@ -170,6 +176,32 @@ class SharedService with DisposableMixin, LifecycleHub, InitializableMixin {
     }
 
     return (exists.$1, exists.$2).asResultValue();
+  }
+
+  Mutex obtainMutex({required String name}) {
+    final exists = _sharedMutexMap[name];
+    if (exists != null) {
+      return exists;
+    }
+
+    final mutex = Mutex();
+    _sharedMutexMap[name] = mutex;
+    mutex.onDispose.whenComplete(() {
+      _sharedMutexMap.remove(name);
+    });
+
+    return mutex;
+  }
+
+  FutureResult<T> executeMutex<T>({required String name, required FutureOr<Result<T>> Function() function}) {
+    final mutex = obtainMutex(name: name);
+    return mutex.executeResult<T>(() async {
+      if (LifeCoordinator.isZoneHeartCanceled) {
+        return CancelationResult();
+      }
+
+      return await function();
+    });
   }
 
   void removeOperator({required String name}) {
