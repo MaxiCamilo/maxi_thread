@@ -27,7 +27,7 @@ class BackgroundIsolateServer implements BackgroundThreadService {
         _threadWaiter ??= Completer<ThreadConnection>();
         final waitResult = await LifeCoordinator.zoneHeart.lifecycleScope.waitCompleter(_threadWaiter!);
         _threadWaiter = null;
-        return waitResult.asResultValue();
+        return waitResult.cast();
       }
 
       final newConnectionResult = await server.createThread(name: 'BackgroundThread-${server.externalConnections.length + 1}');
