@@ -33,4 +33,15 @@ class SharedMutex {
       function: () => threadSystem.backgroundService.executeResult(parameters: para, function: function),
     );
   }
+
+  Future<Result<T>> enqueueBackgroundResult<T>({InvocationParameters parameters = InvocationParameters.empty, required FutureOr<Result<T>> Function(InvocationParameters para) function}) {
+    return enqueueResult<T>(parameters: InvocationParameters.list([parameters, function]), function: _enqueueBackgroundResult<T>);
+  }
+
+  static Future<Result<T>> _enqueueBackgroundResult<T>(InvocationParameters parameters) {
+    final para = parameters.first<InvocationParameters>();
+    final function = parameters.second<FutureOr<Result<T>> Function(InvocationParameters)>();
+
+    return threadSystem.backgroundService.executeResult(parameters: para, function: function);
+  }
 }
