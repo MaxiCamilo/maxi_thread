@@ -218,6 +218,8 @@ class IsolatedThreadServer extends IsolatedThread {
 
   @override
   void performObjectDiscard() {
+    externalConnections.lambda((connection) => connection.requestClosure());
+
     super.performObjectDiscard();
     if (threadSystem == this) {
       threadSystem = const ThreadManagerInitializer();
